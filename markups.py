@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
-btnStatus = KeyboardButton(text='/status')
+btnStatus = KeyboardButton(text='Status')
 btnHelp = KeyboardButton(text='Help')
 btnHelpAdmin = KeyboardButton(text='Help')
 
