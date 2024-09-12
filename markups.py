@@ -1,27 +1,30 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
-btnStatus = KeyboardButton(text='Status')
-btnHelp = KeyboardButton(text='Help')
-btnHelpAdmin = KeyboardButton(text='Help')
+btnStatus = KeyboardButton(text='📶 Статус')
+btnHelp = KeyboardButton(text='❓ Помощь')
+btnHelpAdmin = KeyboardButton(text='❓ Помощь')
 
 # --- Main Menu ---
 mainMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnHelp]],resize_keyboard=True)
 
 # --- Admin Main Menu ---
-btnAdminMenu = KeyboardButton(text='Admin menu')
+btnAdminMenu = KeyboardButton(text='🛠️ Admin menu')
 mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpAdmin]],resize_keyboard=True)
 
 
 # --- Status Menu ---
-btnQueue = InlineKeyboardButton(text='Queue',callback_data='queue')
-btnEnd =InlineKeyboardButton(text='End',callback_data='end')
-StatusMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
+#queue menu
+btnQueue = InlineKeyboardButton(text='⏳ Занять очередь',callback_data='queue')
+queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
+#end menu
+btnEnd =InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
+btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
+endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnBreak]])
 
 # --- Admin Menu ---
-btnForceEnd = KeyboardButton(text='Force end')
-btnBreak = KeyboardButton(text='Break')
-btnFix = KeyboardButton(text='Fix')
-btnKick = KeyboardButton(text='Kick')
-btnBan = KeyboardButton(text='Ban')
-btnMainMenuAdmin = KeyboardButton(text='Main menu')
-adminMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus,  btnForceEnd, btnBreak, btnFix, btnKick, btnBan, btnMainMenuAdmin, btnHelpAdmin]],resize_keyboard=True)
+btnForceEnd = KeyboardButton(text='Принудительно закончить стирку')
+btnFix = KeyboardButton(text='Машинка починена')
+btnKick = KeyboardButton(text='Исключить пользователя')
+btnBan = KeyboardButton(text='Забанить пользователя')
+btnMainMenuAdmin = KeyboardButton(text='Главное меню')
+adminMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus], [btnForceEnd], [btnFix], [btnKick], [btnBan], [btnMainMenuAdmin], [btnHelpAdmin]],resize_keyboard=True)

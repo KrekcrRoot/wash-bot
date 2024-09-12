@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, html, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, BotCommand
+from aiogram.types import Message, BotCommand, CallbackQuery
 from aiogram.methods.set_my_commands import SetMyCommands
 
 from api import API
@@ -31,10 +31,29 @@ api_controller = API()
 async def command_start_handler(message: Message) -> None:
     await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!", reply_markup=nav.mainMenu)
 
-@dp.message(Command("status"))
-async def status(message: Message) -> None:
-    await message.answer(text=f"Your ID is {message.from_user.id}",reply_markup=nav.StatusMenu)
+@dp.message()
+async def keyboardMenu_handler(message: Message) -> None:
 
+    if message.text == '📶 Статус':
+        await message.answer(text='text',reply_markup=nav.queueMenu)
+
+    elif message.text == '🛠️ Admin menu':
+
+        await message.answer(text='text',reply_markup=nav.adminMenu)
+@dp.callback_query()
+async def inlineMenu_handler(callback: CallbackQuery) -> None:
+    if callback.data == 'queue':
+
+        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
+        await callback.answer()
+
+    elif callback.data == 'end':
+
+        await callback.answer(text='ended')
+
+    elif callback.data == 'break':
+
+        await callback.answer(text='broke')
 
 async def main() -> None:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
