@@ -42,6 +42,8 @@ async def main() -> None:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     result: bool = await bot.set_my_commands([
         BotCommand(command="start", description="Запустить бота")
+        BotCommand(command="help", description="Объяснение команд")
+        BotCommand(command="")
     ])
     await dp.start_polling(bot)
 

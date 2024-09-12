@@ -14,5 +14,8 @@ class API:
 
     async def get_status(self):
         return httpx.get(f"{self.host}/status")
+    
+    async def get_users(self):
+        return httpx.get(f"{self.host}/")
 
     
