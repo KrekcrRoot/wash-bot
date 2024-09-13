@@ -8,9 +8,11 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, html, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart, Command, state
 from aiogram.types import Message, BotCommand, CallbackQuery
 from aiogram.methods.set_my_commands import SetMyCommands
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 from api import API
 
@@ -26,12 +28,20 @@ dp = Dispatcher()
 
 api_controller = API()
 
+class Form(StatesGroup):
+    room = State()
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     user_is_authorized=False
     if user_is_authorized==False:
-        await message.answer(text='Привет, {html(message.from_user.full_name)}!'+'\n'+'Введите полный номер своей комнаты:'+'\n'+'(например: 1501/2, 1514/3)')
+        await state.set_state(Form.room)
+        await message.answer(text=f'Привет, {html(message.from_user.full_name)}!'+'\n'+'Введите полный номер своей комнаты:'+'\n'+'(например: 1501/2, 1514/3)')
+
+@dp.message(Form.room)
+async def linking(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(text=message.text+'\n'+'hooked')
 
 @dp.message()
 async def keyboardMenu_handler(message: Message) -> None:
