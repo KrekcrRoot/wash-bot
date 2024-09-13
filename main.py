@@ -29,11 +29,13 @@ api_controller = API()
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!", reply_markup=nav.mainMenu)
+    user_is_authorized=False
+    if user_is_authorized==False:
+        await message.answer(text='Привет, {html(message.from_user.full_name)}!'+'\n'+'Введите полный номер своей комнаты:'+'\n'+'(например: 1501/2, 1514/3)')
 
 @dp.message()
 async def keyboardMenu_handler(message: Message) -> None:
-
+    print(message.message_thread_id)
     if message.text == '📶 Статус':
         await message.answer(text='text',reply_markup=nav.queueMenu)
 
