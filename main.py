@@ -94,6 +94,9 @@ async def inlineMenu_handler(callback: CallbackQuery) -> None:
     elif callback.data == 'end':
         await return_to_statusMenu(callback)
         await callback.answer(text='ended')
+    
+    elif callback.data == 'forgotten':
+        await callback.answer(text='forgotten')
 
     elif callback.data == 'break':
         await callback.message.edit_text(text='Вы уверены?')

@@ -13,9 +13,11 @@ mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpA
 
 
 # --- Status Menu ---
+btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
+btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
 #occupy menu
 btnOccupy = InlineKeyboardButton(text='🧼 Занять',callback_data='occupy')
-occupyMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy]])
+occupyMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy],[btnForgotten],[btnBreak]])
 #queue menu
 btnQueue = InlineKeyboardButton(text='⏳ Занять очередь',callback_data='queue')
 queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
@@ -24,9 +26,7 @@ btnFree = InlineKeyboardButton(text='↩️ Выйти из очереди',call
 in_queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnFree]])
 #end menu
 btnEnd = InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
-btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
-btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
-endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnBreak]])
+endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnForgotten],[btnBreak]])
 
 # --- Confirmation prompt ---
 btnYes = InlineKeyboardButton(text='✅ Да', callback_data='yes')
