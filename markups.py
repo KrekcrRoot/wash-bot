@@ -13,12 +13,19 @@ mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpA
 
 
 # --- Status Menu ---
+#occupy menu
+btnOccupy = InlineKeyboardButton(text='🧼 Занять',callback_data='occupy')
+occupyMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy]])
 #queue menu
 btnQueue = InlineKeyboardButton(text='⏳ Занять очередь',callback_data='queue')
 queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
+#in queue menu
+btnFree = InlineKeyboardButton(text='↩️ Выйти из очереди',callback_data='free')
+in_queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnFree]])
 #end menu
 btnEnd = InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
 btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
+btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
 endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnBreak]])
 
 # --- Confirmation prompt ---
