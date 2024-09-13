@@ -1,13 +1,13 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
 btnStatus = KeyboardButton(text='📶 Статус')
-btnHelp = KeyboardButton(text='❓ Помощь')
-btnHelpAdmin = KeyboardButton(text='❓ Помощь')
 
 # --- Main Menu ---
+btnHelp = KeyboardButton(text='❓ Помощь')
 mainMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnHelp]],resize_keyboard=True)
 
 # --- Admin Main Menu ---
+btnHelpAdmin = KeyboardButton(text='❓ Помощь')
 btnAdminMenu = KeyboardButton(text='🛠️ Admin menu')
 mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpAdmin]],resize_keyboard=True)
 
@@ -17,14 +17,19 @@ mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpA
 btnQueue = InlineKeyboardButton(text='⏳ Занять очередь',callback_data='queue')
 queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
 #end menu
-btnEnd =InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
+btnEnd = InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
 btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
 endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnBreak]])
 
+# --- Confirmation prompt ---
+btnYes = InlineKeyboardButton(text='✅ Да', callback_data='yes')
+btnNo = InlineKeyboardButton(text='❌ Нет', callback_data='no')
+confirmationPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnYes,btnNo]])
+
 # --- Admin Menu ---
-btnForceEnd = KeyboardButton(text='Принудительно закончить стирку')
-btnFix = KeyboardButton(text='Машинка починена')
-btnKick = KeyboardButton(text='Исключить пользователя')
-btnBan = KeyboardButton(text='Забанить пользователя')
-btnMainMenuAdmin = KeyboardButton(text='Главное меню')
-adminMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus], [btnForceEnd], [btnFix], [btnKick], [btnBan], [btnMainMenuAdmin], [btnHelpAdmin]],resize_keyboard=True)
+btnForceEnd = InlineKeyboardButton(text='Принудительно закончить стирку', callback_data='force_end')
+btnForceBreak = InlineKeyboardButton(text='Поломка',callback_data='force_break')
+btnFix = InlineKeyboardButton(text='Починка', callback_data='fix')
+btnKick = InlineKeyboardButton(text='Исключить пол-я', callback_data='kick')
+btnBan = InlineKeyboardButton(text='Забанить пол-я', callback_data='ban')
+adminMenu = InlineKeyboardMarkup(inline_keyboard=[[btnForceEnd], [btnForceBreak,btnFix], [btnKick, btnBan]])
