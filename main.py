@@ -32,7 +32,7 @@ api_controller = API()
 class Form(StatesGroup):
     machineSelect = State()
 
-
+#Returning inline menu into status menu
 async def return_to_statusMenu(callback: CallbackQuery) -> None:
     status='free'
     if status=='free':
