@@ -15,6 +15,7 @@ from app.dto.machine_entity import MachineEntity
 router = Router()
 api_controller = init_api_controller()
 
+#States to separate some menus
 class Form(StatesGroup):
     machine = State()
     menu = State()
