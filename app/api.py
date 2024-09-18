@@ -17,6 +17,9 @@ class API:
         return httpx.get(f"{self.host}/user/my", headers={
             'Authorization': str(user_id)
         })
+    
+    async def get_machines(self):
+        return httpx.get(f"{self.host}/machine/all")
 
     async def get_status(self):
         return httpx.get(f"{self.host}/status", headers={

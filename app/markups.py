@@ -11,6 +11,9 @@ btnHelpAdmin = KeyboardButton(text='❓ Помощь')
 btnAdminMenu = KeyboardButton(text='🛠️ Admin menu')
 mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpAdmin]],resize_keyboard=True)
 
+# --- Machine selection Menu ---
+def machineMenu(machineList):
+    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=i.title) for i in machineList]],resize_keyboard=True)
 
 # --- Status Menu ---
 btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')

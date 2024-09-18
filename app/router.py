@@ -1,6 +1,7 @@
 
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import CommandStart
 from aiogram import Router
 
@@ -9,9 +10,14 @@ import app.markups as nav
 from app.callback import return_to_statusMenu
 from app.api import init_api_controller
 from app.dto.user_entity import UserEntity
+from app.dto.machine_entity import MachineEntity
 
 router = Router()
 api_controller = init_api_controller()
+
+class Form(StatesGroup):
+    machine = State()
+    menu = State()
 
 #Authorization thing
 @router.message(CommandStart())
@@ -24,27 +30,39 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
         user_is_authorized = False
     else:
         res = await api_controller.auth(user_tag, user_id)
-        print(res.json())
         user_is_authorized = res.status_code==200
-        print(user_is_authorized)
 
     if user_is_authorized:
 
         res = await api_controller.get_my(user_id)
         user = json.loads(res.text, object_hook=lambda d: UserEntity(**d))
-        print(user.type)
 
-        machines_list=[['machine']]
-        if len(machines_list)==1:
-            user_is_admin=False
+        if user.link_machine is not None:
+            await state.set_state(Form.menu)
+            user_is_admin=user.type
             if user_is_admin:
                 await message.answer(text='text',reply_markup=nav.mainMenuAdmin)
-            await message.answer(text='text',reply_markup=nav.mainMenu)
+            else:
+                await message.answer(text='text',reply_markup=nav.mainMenu)
+        else:
+            res = await api_controller.get_machines()
+            machines = json.loads(res.text, object_hook=lambda d: MachineEntity(**d))
+            if True:
+                await state.set_state(Form.machine)
+                await message.answer(text="Выберите стиральную машинку из списка",reply_markup=nav.machineMenu(machines))
+            else:
+                pass
     else:
         await message.answer(text="Вы не авторизованы. Обратитесь за помощью к кому скидывались за стиралку")
 
+#Machine selection menu interaction
+@router.message(Form.machine)
+async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
+    state.clear()
+    return message.answer(text=message.text)
 
-@router.message()
+#Main menu interaction
+@router.message(Form.menu)
 async def keyboardMenu_handler(message: Message) -> None:
     if message.text == '📶 Статус':
         status='free'
