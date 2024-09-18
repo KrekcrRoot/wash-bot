@@ -20,6 +20,12 @@ class API:
     
     async def get_users(self):
         return httpx.get(f"{self.host}/")
+    
+    async def auth(self, user_tag, user_id):
+        return httpx.post(f"{self.host}/user/auth", json={
+            "telegram_tag": '@'+user_tag,
+            "telegram_id": str(user_id)
+        })
 
 
 def init_api_controller():

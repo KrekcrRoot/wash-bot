@@ -14,14 +14,26 @@ api_controller = init_api_controller()
 #Authorization thing
 @router.message(CommandStart())
 async def command_start_handler(message: Message, state:FSMContext) -> None:
-    user_is_authorized=True
-    if user_is_authorized==True:
+
+    user_tag = message.from_user.username
+    user_id = message.from_user.id
+
+    if user_tag is None: user_is_authorized = False
+    else:
+        res = await api_controller.auth(user_tag, user_id)
+        print(res.json())
+        user_is_authorized = res.status_code==200
+        print(user_is_authorized)
+
+    if user_is_authorized:
         machines_list=[['machine']]
         if len(machines_list)==1:
             user_is_admin=False
             if user_is_admin:
                 await message.answer(text='text',reply_markup=nav.mainMenuAdmin)
             await message.answer(text='text',reply_markup=nav.mainMenu)
+    else:
+        await message.answer(text="Вы не авторизованы. Обратитесь за помощью к кому скидывались за стиралку")
 
 
 @router.message()
