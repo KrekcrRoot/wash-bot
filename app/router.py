@@ -4,9 +4,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
 from aiogram import Router
 
+import json
 import app.markups as nav
 from app.callback import return_to_statusMenu
 from app.api import init_api_controller
+from app.dto.user_entity import UserEntity
 
 router = Router()
 api_controller = init_api_controller()
@@ -18,7 +20,8 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
     user_tag = message.from_user.username
     user_id = message.from_user.id
 
-    if user_tag is None: user_is_authorized = False
+    if user_tag is None: 
+        user_is_authorized = False
     else:
         res = await api_controller.auth(user_tag, user_id)
         print(res.json())
@@ -26,6 +29,11 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
         print(user_is_authorized)
 
     if user_is_authorized:
+
+        res = await api_controller.get_my(user_id)
+        user = json.loads(res.text, object_hook=lambda d: UserEntity(**d))
+        print(user.type)
+
         machines_list=[['machine']]
         if len(machines_list)==1:
             user_is_admin=False

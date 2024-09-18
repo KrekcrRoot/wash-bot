@@ -13,6 +13,11 @@ class API:
     def __init__(self):
         pass
 
+    async def get_my(self, user_id):
+        return httpx.get(f"{self.host}/user/my", headers={
+            'Authorization': str(user_id)
+        })
+
     async def get_status(self):
         return httpx.get(f"{self.host}/status", headers={
             'Content-Type': 'application/json'
@@ -23,7 +28,7 @@ class API:
     
     async def auth(self, user_tag, user_id):
         return httpx.post(f"{self.host}/user/auth", json={
-            "telegram_tag": '@'+user_tag,
+            "telegram_tag": f"@{user_tag}",
             "telegram_id": str(user_id)
         })
 
