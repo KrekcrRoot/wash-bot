@@ -34,7 +34,14 @@ class API:
             "telegram_tag": f"@{user_tag}",
             "telegram_id": str(user_id)
         })
-
+    async def link_machine(self,user_id, machine_id):
+        return httpx.post(f"{self.host}/machine/link",
+        json={
+            'uuid': machine_id
+        },
+        headers={
+            'Authorization': user_id
+        })
 
 def init_api_controller():
     return API()

@@ -50,16 +50,36 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
             if True:
                 await state.set_state(Form.machine)
                 await message.answer(text="Выберите стиральную машинку из списка",reply_markup=nav.machineMenu(machines))
+            elif len(machines)==1:
+                machine_id = machines[0].uuid
+                res = await api_controller.link_machine(user_id,machine_id)
             else:
-                pass
+                message.answer(text="Something wrong, no machines to link")
     else:
         await message.answer(text="Вы не авторизованы. Обратитесь за помощью к кому скидывались за стиралку")
 
 #Machine selection menu interaction
 @router.message(Form.machine)
 async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
-    state.clear()
-    return message.answer(text=message.text)
+    res = await api_controller.get_machines()
+    machines = json.loads(res.text, object_hook=lambda d: MachineEntity(**d))
+    machine_id=None
+    for i in machines:
+        if i.title==message.text:
+            machine_id=i.uuid
+    
+    if machine_id is not None:
+        user_id = message.from_user.id
+        res = await api_controller.link_machine(user_id,machine_id)
+        if res.status_code==201:
+            state.set_state(Form.menu)
+            await message.answer(text='text',reply_markup=nav.mainMenu)
+        else:
+            state.clear()
+            await message.answer(text='Что-то пошло не так при привязке')
+    else:
+        state.clear()
+        await message.answer(text="Неверно указана машинка")
 
 #Main menu interaction
 @router.message(Form.menu)
