@@ -13,19 +13,6 @@ class API:
     def __init__(self):
         pass
 
-    async def get_my(self, user_id):
-        return httpx.get(f"{self.host}/user/my", headers={
-            'Authorization': str(user_id)
-        })
-    
-    async def get_machines(self):
-        return httpx.get(f"{self.host}/machine/all")
-
-    async def get_status(self):
-        return httpx.get(f"{self.host}/status", headers={
-            'Content-Type': 'application/json'
-        })
-    
     async def get_users(self):
         return httpx.get(f"{self.host}/")
     
@@ -34,13 +21,40 @@ class API:
             "telegram_tag": f"@{user_tag}",
             "telegram_id": str(user_id)
         })
-    async def link_machine(self,user_id, machine_id):
-        return httpx.post(f"{self.host}/machine/link",
-        json={
+    
+    async def get_my(self, user_id):
+        return httpx.get(f"{self.host}/user/my", headers={
+            'Authorization': str(user_id)
+        })
+    
+    #Interaction with washing
+    async def wash_status(self, user_id):
+        return httpx.get(f"{self.host}/wash/status", headers={
+            'Authorization': str(user_id)
+        })
+    
+    async def wash_occupy(self, user_id):
+        return httpx.post(f"{self.host}/wash/occupy", headers={
+            'Authorization': str(user_id)
+        })
+    async def wash_end(self, user_id):
+        return httpx.post(f"{self.host}/wash/end", headers={
+            'Authorization': str(user_id)
+        })
+    
+    #Interaction with machines
+    async def get_machines(self):
+        return httpx.get(f"{self.host}/machine/all")
+
+    async def link_machine(self, user_id, machine_id):
+        return httpx.post(f"{self.host}/machine/link", headers={
+            'Authorization': str(user_id)
+        }, json={
             'uuid': machine_id
-        },
-        headers={
-            'Authorization': user_id
+        })
+    async def unlink_machine(self, user_id):
+        return httpx.post(f"{self.host}/machine/unlink", headers={
+            'Authorization': str(user_id)
         })
 
 def init_api_controller():

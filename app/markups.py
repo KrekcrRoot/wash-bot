@@ -13,7 +13,7 @@ mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpA
 
 # --- Machine selection Menu ---
 def machineMenu(machineList):
-    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=i.title) for i in machineList]],resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=i['title']) for i in machineList]],resize_keyboard=True)
 
 # --- Status Menu ---
 btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
@@ -30,6 +30,11 @@ in_queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnFree]])
 #end menu
 btnEnd = InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
 endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnForgotten],[btnBreak]])
+
+# --- Forgotten cloth prompt ---
+btnCancel = InlineKeyboardButton(text='🙅‍♂️ Отмена', callback_data='cancel')
+cancelPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnCancel]])
+
 
 # --- Confirmation prompt ---
 btnYes = InlineKeyboardButton(text='✅ Да', callback_data='yes')

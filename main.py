@@ -20,7 +20,9 @@ async def main() -> None:
     dp.include_router(router=router)
     result: bool = await bot.set_my_commands([
         BotCommand(command="start", description="Запустить бота"),
-        BotCommand(command="help", description="Объяснение команд"),
+        BotCommand(command="change_machine", description="Смена стиралки"),
+        BotCommand(command="cancel", description="Отменить действие"),
+        BotCommand(command="help", description="Объяснение команд")
     ])
     await dp.start_polling(bot)
 

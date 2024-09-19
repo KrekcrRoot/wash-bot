@@ -1,4 +1,3 @@
-
 import json
 from app.dto.machine_entity import MachineEntity
 
@@ -14,7 +13,7 @@ class UserEntity:
     trust_factor: int
     link_machine: MachineEntity
 
-    def __init__(self, uuid, telegram_id, telegram_tag, type, kicked, count, time, trust_factor, link_machine):
+    def __init__(self, uuid, telegram_id, telegram_tag, type, kicked, count, time, trust_factor, link_machine=[]):
         self.uuid = uuid
         self.telegram_id = telegram_id
         self.telegram_tag = telegram_tag
@@ -23,4 +22,4 @@ class UserEntity:
         self.count = count
         self.time = time
         self.trust_factor = trust_factor
-        self.link_machine = json.loads(link_machine, object_hook=lambda d: MachineEntity(**d))
+        self.link_machine = link_machine
