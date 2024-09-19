@@ -11,16 +11,21 @@ btnHelpAdmin = KeyboardButton(text='❓ Помощь')
 btnAdminMenu = KeyboardButton(text='🛠️ Admin menu')
 mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpAdmin]],resize_keyboard=True)
 
+# -- Report Menu --
+btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
+btnOccupied = InlineKeyboardButton(text='🥷🏻 Стиралка занята', callback_data='occupied')
+btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
+reportMenu = InlineKeyboardMarkup(inline_keyboard=[[btnForgotten],[btnOccupied],[btnBreak]])
+
 # --- Machine selection Menu ---
 def machineMenu(machineList):
     return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=i['title']) for i in machineList]],resize_keyboard=True)
 
 # --- Status Menu ---
-btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
-btnBreak = InlineKeyboardButton(text='🔧 Поломка',callback_data='break')
+btnReport = InlineKeyboardButton(text='🚨 Сообщить о проблеме',callback_data='report')
 #occupy menu
 btnOccupy = InlineKeyboardButton(text='🧼 Занять',callback_data='occupy')
-occupyMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy],[btnForgotten],[btnBreak]])
+occupyMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy],[btnReport]])
 #queue menu
 btnQueue = InlineKeyboardButton(text='⏳ Занять очередь',callback_data='queue')
 queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
@@ -29,7 +34,7 @@ btnFree = InlineKeyboardButton(text='↩️ Выйти из очереди',call
 in_queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnFree]])
 #end menu
 btnEnd = InlineKeyboardButton(text='🏁 Закончить стирку',callback_data='end')
-endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnForgotten],[btnBreak]])
+endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnReport]])
 
 # --- Forgotten cloth prompt ---
 btnCancel = InlineKeyboardButton(text='🙅‍♂️ Отмена', callback_data='cancel')

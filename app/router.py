@@ -188,6 +188,9 @@ async def inlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None
                 await callback.answer(text='Стирка заняла: '+str(time['elapsedTime'])+'мин')
             else:
                 await callback.answer(text='Что-то пошло не так')
+    elif callback.data == 'report':
+        await callback.message.edit_text(text='Выберите проблему из списка:')
+        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.reportMenu)
     
     elif callback.data == 'forgotten':
         await state.set_state(Form.forgotten_cloth)
