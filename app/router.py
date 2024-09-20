@@ -17,8 +17,10 @@ api_controller = init_api_controller()
 #States to separate some menus
 class Form(StatesGroup):
     forgotten_cloth = State()
+    occupied_confirmation = State()
     break_confirmation = State()
     machine = State()
+    adminMenu = State()
     menu = State()
 
 #Authorization thing
@@ -43,13 +45,13 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
             await state.set_state(Form.menu)
             user_is_admin=user['type']
             if user_is_admin:
-                await message.answer(text='text',reply_markup=nav.mainMenuAdmin)
+                await message.answer(text='Вы успешно авторизованы',reply_markup=nav.mainMenuAdmin)
             else:
-                await message.answer(text='text',reply_markup=nav.mainMenu)
+                await message.answer(text='Вы успешно авторизованы',reply_markup=nav.mainMenu)
         else:
             res = await api_controller.get_machines()
             machines = json.loads(res.text)
-            if True:
+            if len(machines)>1 or True:
                 await state.set_state(Form.machine)
                 await message.answer(text="Выберите стиральную машинку из списка",reply_markup=nav.machineMenu(machines))
             elif len(machines)==1:
@@ -116,7 +118,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
         res = await api_controller.link_machine(user_id,machine_id)
         if res.status_code==201:
             await state.set_state(Form.menu)
-            await message.answer(text='text',reply_markup=nav.mainMenu)
+            await message.answer(text='Вы успешно авторизованы',reply_markup=nav.mainMenu)
         else:
             await state.clear()
             await message.answer(text='Что-то пошло не так при привязке')
@@ -125,7 +127,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
 
 #Main menu interaction
 @router.message(Form.menu)
-async def keyboardMenu_handler(message: Message) -> None:
+async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
     
     if message.text == '📶 Статус':
@@ -144,14 +146,22 @@ async def keyboardMenu_handler(message: Message) -> None:
                     else:
                         await message.answer(text=f"Стиралка занята\nЕе использует: {status['telegramTag']}\nВремя начала использования: {status['timeBegin']}")
     elif message.text == '🛠️ Admin menu':
-        await message.answer(text='text',reply_markup=nav.adminMenu)
+        res = await api_controller.get_my(user_id)
+        user = json.loads(res.text)
+        user_is_admin=user['type']
+        
+        if user_is_admin:
+            await state.set_state(Form.adminMenu)
+            await message.answer(text=f'Вы сейчас администрируете стиралку: {user['link_machine']['title']}',reply_markup=nav.adminMenu)
+        else:
+            await message.answer(text='Вы не админ',reply_markup=nav.mainMenu)
 
     elif message.text == '❓ Помощь':
         await message.answer(text='text')
 
-#Handling inline menu actions
+#Main inline menu actions
 @router.callback_query(Form.menu)
-async def inlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
     if callback.data == 'occupy':
         res = await api_controller.wash_status(user_id)
@@ -198,24 +208,70 @@ async def inlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.cancelPrompt)
         await callback.answer()
 
+    elif callback.data == "occupied":
+        await state.set_state(Form.occupied_confirmation)
+        await callback.message.edit_text(text='Вы уверены?')
+        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.confirmationPrompt)
+        await callback.answer()
+
     elif callback.data == 'break':
         await state.set_state(Form.break_confirmation)
         await callback.message.edit_text(text='Вы уверены?')
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.confirmationPrompt)
         await callback.answer()
 
+#Admin inline menu actions
+@router.callback_query(Form.adminMenu)
+async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    user_id=callback.from_user.id
+
+    res = await api_controller.get_my(user_id)
+    user = json.loads(res.text)
+    user_is_admin=user['type']
+    
+
+    if user_is_admin:
+        
+        if callback.data == 'add_user':
+            pass
+        elif callback.data == 'kick_user':
+            pass
+        elif callback.data == 'stop_machine':
+            pass
+        elif callback.data == 'force_end':
+            pass
+        elif callback.data == 'fix':
+            pass
+        elif callback.data == 'change_admin':
+            pass
+
+    else:
+        await callback.message.edit_text(text='Вы не админ')
+        await callback.message.delete_reply_markup()
+        await callback.answer()
+
 #Returning inline menu into status menu
 async def return_to_statusMenu(callback: CallbackQuery) -> None:
-    status='free'
-    if status=='free':
-        await callback.message.edit_text(text='text')
+    user_id=callback.from_user.id
+
+    res = await api_controller.wash_status(user_id)
+    status = json.loads(res.text)
+
+    if status['isActive']==False:
+        await callback.message.edit_text(text='Стиралка не занята')
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.occupyMenu)
-    elif status=='in work':
-        await callback.message.edit_text(text='text')
-        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.queueMenu)
     else:
-        await callback.message.edit_text(text='Занято')
-        await callback.message.delete_reply_markup()
+        if status['isActive']==True:
+            if status['telegramTag']=='@'+callback.from_user.username:
+                await callback.message.edit_text(text='text')
+                await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.endMenu)
+            else:
+                if False:
+                    await callback.message.edit_text(text=f"Стиралка занята\nЕе использует: {status['telegramTag']}\nВремя начала использования: {status['timeBegin']}")
+                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.queueMenu)
+                else:
+                    await callback.message.edit_text(text=f"Стиралка занята\nЕе использует: {status['telegramTag']}\nВремя начала использования: {status['timeBegin']}")
+                    await callback.message.delete_reply_markup()
 
 #Managing forgotten cloth prompt
 @router.message(Form.forgotten_cloth)
@@ -243,6 +299,20 @@ async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None
     
     elif callback.data == 'no':
         await state.set_state(Form.menu)
-        await callback.message.edit_text(text='text')
-        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
+        await return_to_statusMenu(callback)
         await callback.answer()
+
+#Occupied confirmation
+@router.callback_query(Form.occupied_confirmation)
+async def occupied_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
+    user_id=callback.from_user.id
+    if callback.data == 'yes':
+        await state.set_state(Form.menu)
+        await return_to_statusMenu(callback)
+        await callback.answer(text='occupied')
+    
+    elif callback.data == 'no':
+        await state.set_state(Form.menu)
+        await return_to_statusMenu(callback)
+        await callback.answer()
+

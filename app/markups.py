@@ -9,7 +9,7 @@ mainMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnHelp]],resize_keyboard=T
 # --- Admin Main Menu ---
 btnHelpAdmin = KeyboardButton(text='❓ Помощь')
 btnAdminMenu = KeyboardButton(text='🛠️ Admin menu')
-mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnAdminMenu, btnHelpAdmin]],resize_keyboard=True)
+mainMenuAdmin = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnHelpAdmin],[btnAdminMenu]],resize_keyboard=True)
 
 # -- Report Menu --
 btnForgotten = InlineKeyboardButton(text='👕 В стиралке забыты вещи', callback_data='forgotten')
@@ -47,9 +47,10 @@ btnNo = InlineKeyboardButton(text='❌ Нет', callback_data='no')
 confirmationPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnYes,btnNo]])
 
 # --- Admin Menu ---
+btnAddUser = InlineKeyboardButton(text='Добавить пол-я', callback_data='add_user')
+btnKickUser = InlineKeyboardButton(text='Исключить пол-я', callback_data='kick_user')
+btnStopMachine = InlineKeyboardButton(text='Запретить стирку с указанием причины', callback_data='stop_machine')
 btnForceEnd = InlineKeyboardButton(text='Принудительно закончить стирку', callback_data='force_end')
-btnForceBreak = InlineKeyboardButton(text='Поломка',callback_data='force_break')
-btnFix = InlineKeyboardButton(text='Починка', callback_data='fix')
-btnKick = InlineKeyboardButton(text='Исключить пол-я', callback_data='kick')
-btnBan = InlineKeyboardButton(text='Забанить пол-я', callback_data='ban')
-adminMenu = InlineKeyboardMarkup(inline_keyboard=[[btnForceEnd], [btnForceBreak,btnFix], [btnKick, btnBan]])
+btnFix = InlineKeyboardButton(text='Разрешить стирку', callback_data='fix')
+btnChangeAdmin = InlineKeyboardButton(text='Передать права администратора', callback_data='change_admin')
+adminMenu = InlineKeyboardMarkup(inline_keyboard=[[btnAddUser,btnKickUser],[btnStopMachine],[btnForceEnd], [btnFix],[btnChangeAdmin]])
