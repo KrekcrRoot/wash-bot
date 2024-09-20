@@ -8,7 +8,7 @@ from aiogram import Router
 import json
 import app.markups as nav
 from app.api import init_api_controller
-from app.dto.user_entity import UserEntity
+from app.dto.user_entity import UserEntity, create_user
 from app.dto.machine_entity import MachineEntity
 
 router = Router()
@@ -39,11 +39,11 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
     if user_is_authorized:
 
         res = await api_controller.get_my(user_id)
-        user = json.loads(res.text)
+        user: UserEntity = create_user(res.json())
 
-        if user['link_machine'] is not None:
+        if user.link_machine is not None:
             await state.set_state(Form.menu)
-            user_is_admin=user['type']
+            user_is_admin=user.type
             if user_is_admin:
                 await message.answer(text='Вы успешно авторизованы',reply_markup=nav.mainMenuAdmin)
             else:

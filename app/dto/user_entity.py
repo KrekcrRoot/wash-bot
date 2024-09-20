@@ -13,13 +13,9 @@ class UserEntity:
     trust_factor: int
     link_machine: MachineEntity
 
-    def __init__(self, uuid, telegram_id, telegram_tag, type, kicked, count, time, trust_factor, link_machine=[]):
-        self.uuid = uuid
-        self.telegram_id = telegram_id
-        self.telegram_tag = telegram_tag
-        self.type = type
-        self.kicked = kicked
-        self.count = count
-        self.time = time
-        self.trust_factor = trust_factor
-        self.link_machine = link_machine
+    def __init__(self, dict):
+        self.__dict__.update(dict)
+
+
+def create_user(dict):
+    return json.loads(json.dumps(dict), object_hook=UserEntity)
