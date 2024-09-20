@@ -4,12 +4,15 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command, CommandStart
 from aiogram import Router
+from typing import List
 
 import json
 import app.markups as nav
 from app.api import init_api_controller
 from app.dto.user_entity import UserEntity, create_user
-from app.dto.machine_entity import MachineEntity
+from app.dto.machine_entity import MachineEntity, create_machineList
+from app.dto.status_entity import StatusEntity, create_status
+from app.dto.time_entity import TimeEntity, create_time
 
 router = Router()
 api_controller = init_api_controller()
@@ -50,7 +53,7 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
                 await message.answer(text='Вы успешно авторизованы',reply_markup=nav.mainMenu)
         else:
             res = await api_controller.get_machines()
-            machines = json.loads(res.text)
+            machines: List[MachineEntity] = create_machineList(res.json())
             if len(machines)>1 or True:
                 await state.set_state(Form.machine)
                 await message.answer(text="Выберите стиральную машинку из списка",reply_markup=nav.machineMenu(machines))
@@ -83,11 +86,11 @@ async def cancel_handler(message: Message, state:FSMContext) -> None:
 
     if user_is_authorized:
         res = await api_controller.get_my(user_id)
-        user = json.loads(res.text)
+        user: UserEntity = create_user(res.json())
 
-        if user['link_machine'] is not None:
+        if user.link_machine is not None:
             res = await api_controller.get_machines()
-            machines = json.loads(res.text)
+            machines: List[MachineEntity] = create_machineList(res.json())
             if len(machines)>1 or True:
                 res = await api_controller.unlink_machine(user_id)
                 if res.status_code==201:
@@ -105,16 +108,15 @@ async def cancel_handler(message: Message, state:FSMContext) -> None:
 @router.message(Form.machine)
 async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     res = await api_controller.get_machines()
-    machines = json.loads(res.text)
+    machines: List[MachineEntity] = create_machineList(res.json())
     machine_id=None
     if type(message.text) is str:
         for i in machines:
-            if i['title']==message.text:
-                machine_id=i['uuid']
+            if i.title==message.text:
+                machine_id=i.uuid
     
     if machine_id is not None:
         user_id = message.from_user.id
-        print(user_id,machine_id)
         res = await api_controller.link_machine(user_id,machine_id)
         if res.status_code==201:
             await state.set_state(Form.menu)
@@ -132,27 +134,27 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     
     if message.text == '📶 Статус':
         res = await api_controller.wash_status(user_id)
-        status = json.loads(res.text)
+        status: StatusEntity = create_status(res.json())
 
-        if status['isActive']==False:
+        if status.isActive==False:
             await message.answer(text='Стиралка не занята',reply_markup=nav.occupyMenu)
         else:
-            if status['isActive']==True:
-                if status['telegramTag']=='@'+message.from_user.username:
+            if status.isActive==True:
+                if status.telegramTag=='@'+message.from_user.username:
                     await message.answer(text='text', reply_markup=nav.endMenu)
                 else:
                     if False:
-                        await message.answer(text=f"Стиралка занята\nЕе использует: {status['telegramTag']}\nВремя начала использования: {status['timeBegin']}",reply_markup=nav.queueMenu)
+                        await message.answer(text=f"Стиралка занята\nЕе использует: {status.telegramTag}\nВремя начала использования: {status.timeBegin}",reply_markup=nav.queueMenu)
                     else:
-                        await message.answer(text=f"Стиралка занята\nЕе использует: {status['telegramTag']}\nВремя начала использования: {status['timeBegin']}")
+                        await message.answer(text=f"Стиралка занята\nЕе использует: {status.telegramTag}\nВремя начала использования: {status.timeBegin}")
     elif message.text == '🛠️ Admin menu':
         res = await api_controller.get_my(user_id)
-        user = json.loads(res.text)
-        user_is_admin=user['type']
+        user: UserEntity = create_user(res.json())
+        user_is_admin=user.type
         
         if user_is_admin:
             await state.set_state(Form.adminMenu)
-            await message.answer(text=f'Вы сейчас администрируете стиралку: {user['link_machine']['title']}',reply_markup=nav.adminMenu)
+            await message.answer(text=f'Вы сейчас администрируете стиралку: {user.link_machine.title}',reply_markup=nav.adminMenu)
         else:
             await message.answer(text='Вы не админ',reply_markup=nav.mainMenu)
 
@@ -165,9 +167,9 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
     user_id=callback.from_user.id
     if callback.data == 'occupy':
         res = await api_controller.wash_status(user_id)
-        status = json.loads(res.text)
+        status: StatusEntity = create_status(res.json())
         
-        if status['isActive']==False:
+        if status.isActive==False:
             res = await api_controller.wash_occupy(user_id)
             if res.status_code==201:
                 await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
@@ -187,15 +189,15 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
 
     elif callback.data == 'end':
         res = await api_controller.wash_status(user_id)
-        status = json.loads(res.text)
+        status: StatusEntity = create_status(res.json())
         
-        if status['isActive']==True:
+        if status.isActive:
             res = await api_controller.wash_end(user_id)
 
             if res.status_code==201:
-                time = json.loads(res.text)
+                time: TimeEntity = create_time(res.json())
                 await return_to_statusMenu(callback)
-                await callback.answer(text='Стирка заняла: '+str(time['elapsedTime'])+'мин')
+                await callback.answer(text=f'Стирка заняла: {time.elapsedTime} мин')
             else:
                 await callback.answer(text='Что-то пошло не так')
     elif callback.data == 'report':
@@ -226,8 +228,8 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
     user_id=callback.from_user.id
 
     res = await api_controller.get_my(user_id)
-    user = json.loads(res.text)
-    user_is_admin=user['type']
+    user: UserEntity = create_user(res.json())
+    user_is_admin=user.type
     
 
     if user_is_admin:
@@ -255,14 +257,14 @@ async def return_to_statusMenu(callback: CallbackQuery) -> None:
     user_id=callback.from_user.id
 
     res = await api_controller.wash_status(user_id)
-    status = json.loads(res.text)
+    status: StatusEntity = create_status(res.json())
 
-    if status['isActive']==False:
+    if not status.isActive:
         await callback.message.edit_text(text='Стиралка не занята')
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.occupyMenu)
     else:
-        if status['isActive']==True:
-            if status['telegramTag']=='@'+callback.from_user.username:
+        if status.isActive:
+            if status.telegramTag=='@'+callback.from_user.username:
                 await callback.message.edit_text(text='text')
                 await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.endMenu)
             else:

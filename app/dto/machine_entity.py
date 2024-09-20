@@ -1,3 +1,5 @@
+import json
+
 class MachineEntity:
 
     uuid: str
@@ -5,8 +7,8 @@ class MachineEntity:
     isActive: bool
     broken: bool
 
-    def __init__(self, uuid, title, isActive, broken):
-        self.uuid = uuid
-        self.title = title
-        self.isActive = isActive
-        self.broken = broken
+    def __init__(self, dict):
+        self.__dict__.update(dict)
+
+def create_machineList(dict):
+    return json.loads(json.dumps(dict), object_hook=MachineEntity)
