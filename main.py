@@ -22,6 +22,7 @@ async def main() -> None:
         BotCommand(command="start", description="Запустить бота"),
         BotCommand(command="change_machine", description="Смена стиралки"),
         BotCommand(command="cancel", description="Отменить действие"),
+        BotCommand(command="info", description="Информация о пользователе"),
         BotCommand(command="help", description="Объяснение команд")
     ])
     await dp.start_polling(bot)

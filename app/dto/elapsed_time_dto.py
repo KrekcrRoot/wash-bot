@@ -1,6 +1,6 @@
 import json
 
-class TimeEntity:
+class ElapsedTime_Dto:
     
     elapsedTime: float
 
@@ -8,4 +8,4 @@ class TimeEntity:
         self.__dict__.update(dict)
 
 def create_time(dict):
-    return json.loads(json.dumps(dict), object_hook=TimeEntity)
+    return json.loads(json.dumps(dict), object_hook=ElapsedTime_Dto)

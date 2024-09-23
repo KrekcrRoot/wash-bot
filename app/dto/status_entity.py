@@ -1,8 +1,9 @@
 import json
+from app.dto.status_enum import Status
 
 class StatusEntity:
 
-    isActive: bool
+    status: Status
     telegramTag: str
     timeBegin: str
 
