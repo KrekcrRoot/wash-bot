@@ -44,6 +44,12 @@ class API:
         return httpx.post(f"{self.host}/wash/occupy", headers={
             'Authorization': str(user_id)
         })
+    
+    async def wash_occupy_order(self, user_id):
+        return httpx.post(f"{self.host}/wash/occupy-order", headers={
+            'Authorization': str(user_id)
+        })
+
     async def wash_end(self, user_id):
         return httpx.post(f"{self.host}/wash/end", headers={
             'Authorization': str(user_id)
@@ -51,8 +57,13 @@ class API:
     
     #Interaction with order
 
-    async def order_user(self, user_id):
-        return httpx.post(f"{self.host}/order/get-last", headers={
+    async def get_order(self, user_id):
+        return httpx.get(f"{self.host}/order/get-last", headers={
+            'Authorization': user_id
+        })
+    
+    async def cancel_order(self, user_id):
+        return httpx.post(f"{self.host}/order/cancel", headers={
             'Authorization': user_id
         })
     

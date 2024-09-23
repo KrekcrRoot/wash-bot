@@ -3,6 +3,13 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 
 btnStatus = KeyboardButton(text=t.menu_status)
 
+# --- Confirmation prompts ---
+btnYes = InlineKeyboardButton(text=t.menu_yes, callback_data='yes')
+btnNo = InlineKeyboardButton(text=t.menu_no, callback_data='no')
+confirmationPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnYes,btnNo]])
+btnCancel = InlineKeyboardButton(text=t.menu_cancel, callback_data='cancel')
+cancelPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnCancel]])
+
 # --- Main Menu ---
 btnHelp = KeyboardButton(text=t.menu_help)
 mainMenu = ReplyKeyboardMarkup(keyboard=[[btnStatus, btnHelp]],resize_keyboard=True)
@@ -33,19 +40,12 @@ queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnQueue]])
 #in queue menu
 btnFree = InlineKeyboardButton(text=t.menu_status_leave_queue,callback_data='free')
 in_queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnFree]])
+#waiting menu
+btnOccupy_from_queue = InlineKeyboardButton(text=t.menu_status_occupy_from_queue, callback_data='occupy from queue')
+waitingMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy_from_queue],[btnCancel]])
 #end menu
 btnEnd = InlineKeyboardButton(text=t.menu_status_end,callback_data='end')
 endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnReport]])
-
-# --- Forgotten cloth prompt ---
-btnCancel = InlineKeyboardButton(text=t.menu_cancel, callback_data='cancel')
-cancelPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnCancel]])
-
-
-# --- Confirmation prompt ---
-btnYes = InlineKeyboardButton(text=t.menu_yes, callback_data='yes')
-btnNo = InlineKeyboardButton(text=t.menu_no, callback_data='no')
-confirmationPrompt = InlineKeyboardMarkup(inline_keyboard=[[btnYes,btnNo]])
 
 # --- Admin Menu ---
 btnAddUser = InlineKeyboardButton(text=t.menu_admin_add_user, callback_data='add_user')

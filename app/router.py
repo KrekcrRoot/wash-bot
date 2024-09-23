@@ -166,17 +166,26 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
             await message.answer(text=t.status_free,reply_markup=nav.occupyMenu)
         elif Status[status.status]==Status.Busy:
             if status.telegramTag=='@'+message.from_user.username:
-                    await message.answer(text='text', reply_markup=nav.endMenu)
+                    await message.answer(text=t.wash_executes, reply_markup=nav.endMenu)
             else:
                 await message.answer(text=t.status_busy(status.telegramTag, status.timeBegin),reply_markup=nav.queueMenu)
         elif Status[status.status]==Status.Ordered:
             if status.telegramTag=='@'+message.from_user.username:
-                    await message.answer(text='text', reply_markup=nav.endMenu)
+                    await message.answer(text=t.wash_executes, reply_markup=nav.endMenu)
             else:
-                res = await api_controller.order_user(user_id)
+                res = await api_controller.get_order(user_id)
                 waiter: OrderEntity = create_orderEntity(res.json())
 
-
+                if waiter.user.telegram_id==user_id:
+                    await message.answer(text=t.wash_executes_queue, reply_markup=nav.queueMenu)
+                else:
+                    await message.answer(text=t.status_ordered(status.telegramTag, status.timeBegin, waiter.user.telegram_tag))
+        elif Status[status.status]==Status.Waiting:
+            if status.telegramTag=='@'+message.from_user.username:
+                    await message.answer(text=t.wash_executes, reply_markup=nav.waitingMenu)
+            else:
+                await message.answer(text=t.status_waiting,reply_markup=nav.queueMenu)
+        
     elif message.text == '🛠️ Admin menu':
         res = await api_controller.user_info(user_id)
         user: UserEntity = create_user(res.json())
@@ -191,7 +200,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
             await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
 
     elif message.text == '❓ Помощь':
-        await message.answer(text='text')
+        await message.answer(text=t.help)
 
 #Main inline menu actions
 @router.callback_query(Form.menu)
@@ -204,20 +213,44 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         if Status[status.status]==Status.Free:
             res = await api_controller.wash_occupy(user_id)
             if res.status_code==201:
+                await callback.message.edit_text(text=t.wash_executes)
                 await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
                 await callback.answer()
             else:
-                await callback.answer()
+                await callback.answer(text=t.error_wash_occupy)
         else:
-            await callback.answer()
+            await callback.answer(text=t.error_wash_occupy)
 
     elif callback.data == 'queue':
-        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.in_queueMenu)
-        await callback.answer()
+        res = await api_controller.wash_status(user_id)
+        status: StatusEntity = create_status(res.json())
+        
+        if Status[status.status]==Status.Busy:
+            res = await api_controller.wash_occupy_order(user_id)
+
+            if res.status_code == 201:
+                await callback.message.edit_text(text=t.wash_executes_queue)
+                await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.in_queueMenu)
+                await callback.answer()
+            else:
+                await callback.answer(text=t.error_wash_queue)
+        else:
+            await callback.answer(text=t.error_wash_queue)
 
     elif callback.data == 'free':
-        await return_to_statusMenu(callback)
-        await callback.answer()
+        res = await api_controller.wash_status(user_id)
+        status: StatusEntity = create_status(res.json())
+        
+        if Status[status.status] == Status.Ordered or Status[status.status] == Status.Waiting:
+            res = await api_controller.cancel_order(user_id)
+
+            if res.status_code == 201:
+                await return_to_statusMenu(callback)
+                await callback.answer()
+            else:
+                await callback.answer(text=t.error_order_free)
+        else:
+            await callback.answer(text=t.error_order_free)
 
     elif callback.data == 'end':
         res = await api_controller.wash_status(user_id)
@@ -234,6 +267,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
                 await callback.answer()
             else:
                 await callback.answer(text=t.error_wash_end)
+
     elif callback.data == 'report':
         await callback.message.edit_text(text=t.report_select)
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.reportMenu)
@@ -294,7 +328,46 @@ async def return_to_statusMenu(callback: CallbackQuery) -> None:
 
     if Status[status.status]==Status.Free:
         await callback.message.edit_text(text=t.status_free)
-        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.occupyMenu)
+        await callback.message.edit_reply_markup(reply_markup=nav.occupyMenu)
+        await callback.answer()
+
+    elif Status[status.status]==Status.Busy:
+        if status.telegramTag=='@'+callback.from_user.username:
+                await callback.message.edit_text(text=t.wash_executes)
+                await callback.message.edit_reply_markup(reply_markup=nav.endMenu)
+                await callback.answer()
+        else:
+            await callback.message.edit_text(text=t.status_busy(status.telegramTag, status.timeBegin))
+            await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
+            await callback.answer()
+
+    elif Status[status.status]==Status.Ordered:
+        if status.telegramTag=='@'+callback.from_user.username:
+                await callback.message.edit_text(text=t.wash_executes)
+                await callback.message.edit_reply_markup(reply_markup=nav.endMenu)
+                await callback.answer()
+        else:
+            res = await api_controller.get_order(user_id)
+            waiter: OrderEntity = create_orderEntity(res.json())
+
+            if waiter.user.telegram_id==user_id:
+                await callback.message.edit_text(text=t.wash_executes_queue)
+                await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
+                await callback.answer()
+            else:
+                await callback.message.edit_text(text=t.status_ordered(status.telegramTag, status.timeBegin, waiter.user.telegram_tag))
+                await callback.message.delete_reply_markup
+                await callback.answer()
+
+    elif Status[status.status]==Status.Waiting:
+        if status.telegramTag=='@'+callback.from_user.username:
+                await callback.message.edit_text(text=t.wash_executes)
+                await callback.message.edit_reply_markup(reply_markup=nav.waitingMenu)
+                await callback.answer
+        else:
+            await callback.message.edit_text(text=t.status_waiting)
+            await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
+            await callback.answer()
 
 
 #Managing forgotten cloth prompt
