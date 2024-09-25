@@ -28,11 +28,6 @@ class API:
         return httpx.get(f"{self.host}/user/my", headers={
             'Authorization': str(user_id)
         })
-    
-    async def admin_check(self, user_id):
-        return httpx.get(f"{self.host}/admin/check", headers={
-            'Authorization': str(user_id)
-        })
 
     #Interaction with washing
     async def wash_status(self, user_id):
@@ -84,6 +79,12 @@ class API:
         })
     async def unlink_machine(self, user_id):
         return httpx.post(f"{self.host}/machine/unlink", headers={
+            'Authorization': str(user_id)
+        })
+    
+    #Admin interactioins
+    async def admin_check(self, user_id):
+        return httpx.get(f"{self.host}/admin/check", headers={
             'Authorization': str(user_id)
         })
 

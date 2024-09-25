@@ -17,6 +17,7 @@ from app.dto.order_entity import OrderEntity, create_orderEntity
 from app.dto.elapsed_time_dto import ElapsedTime_Dto, create_time
 from app.dto.admin_check_dto import AdminCheckDto, create_admin_check_dto
 from app.dto.status_enum import Status
+from app.dto.callback_codes import CallbackData
 
 router = Router()
 api_controller = init_api_controller()
@@ -156,7 +157,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
 async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
     
-    if message.text == '📶 Статус':
+    if message.text == t.menu_status:
         res = await api_controller.wash_status(user_id)
         status: StatusEntity = create_status(res.json())
 
@@ -186,7 +187,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
             else:
                 await message.answer(text=t.status_waiting,reply_markup=nav.queueMenu)
         
-    elif message.text == '🛠️ Admin menu':
+    elif message.text == t.menu_admin:
         res = await api_controller.user_info(user_id)
         user: UserEntity = create_user(res.json())
 
@@ -199,14 +200,14 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
         else:
             await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
 
-    elif message.text == '❓ Помощь':
+    elif message.text == t.menu_help:
         await message.answer(text=t.help)
 
 #Main inline menu actions
 @router.callback_query(Form.menu)
 async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
-    if callback.data == 'occupy':
+    if callback.data == CallbackData.occupy:
         res = await api_controller.wash_status(user_id)
         status: StatusEntity = create_status(res.json())
         
@@ -221,7 +222,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         else:
             await callback.answer(text=t.error_wash_occupy)
 
-    elif callback.data == 'queue':
+    elif callback.data == CallbackData.queue:
         res = await api_controller.wash_status(user_id)
         status: StatusEntity = create_status(res.json())
         
@@ -237,7 +238,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         else:
             await callback.answer(text=t.error_wash_queue)
 
-    elif callback.data == 'free':
+    elif callback.data == CallbackData.free:
         res = await api_controller.wash_status(user_id)
         status: StatusEntity = create_status(res.json())
         
@@ -252,7 +253,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         else:
             await callback.answer(text=t.error_order_free)
 
-    elif callback.data == 'end':
+    elif callback.data == CallbackData.end:
         res = await api_controller.wash_status(user_id)
         status: StatusEntity = create_status(res.json())
         
@@ -268,23 +269,23 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
             else:
                 await callback.answer(text=t.error_wash_end)
 
-    elif callback.data == 'report':
+    elif callback.data == CallbackData.report:
         await callback.message.edit_text(text=t.report_select)
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.reportMenu)
     
-    elif callback.data == 'forgotten':
+    elif callback.data == CallbackData.forgotten:
         await state.set_state(Form.forgotten_cloth)
         await callback.message.edit_text(text=t.report_forgotten_photo)
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.cancelPrompt)
         await callback.answer()
 
-    elif callback.data == "occupied":
+    elif callback.data == CallbackData.occupied:
         await state.set_state(Form.occupied_confirmation)
         await callback.message.edit_text(text=t.confirm_occupy)
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.confirmationPrompt)
         await callback.answer()
 
-    elif callback.data == 'break':
+    elif callback.data == CallbackData.broke:
         await state.set_state(Form.break_confirmation)
         await callback.message.edit_text(text=t.confirm_break)
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.confirmationPrompt)
@@ -301,17 +302,19 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
 
     if admin.isAdmin:
         
-        if callback.data == 'add_user':
+        if callback.data == CallbackData.add_user:
             pass
-        elif callback.data == 'kick_user':
+        elif callback.data == CallbackData.kick_user:
             pass
-        elif callback.data == 'stop_machine':
+        elif callback.data == CallbackData.fix:
             pass
-        elif callback.data == 'force_end':
+        elif callback.data == CallbackData.stop_machine:
             pass
-        elif callback.data == 'fix':
+        elif callback.data == CallbackData.force_end:
             pass
-        elif callback.data == 'change_admin':
+        elif callback.data == CallbackData.change_title:
+            pass
+        elif callback.data == CallbackData.change_admin:
             pass
 
     else:
@@ -381,7 +384,7 @@ async def forgotten_cloth_photo(message: Message, state: FSMContext) -> None:
 @router.callback_query(Form.forgotten_cloth)
 async def forgotten_cloth_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
-    if callback.data == 'cancel':
+    if callback.data == CallbackData.cancel:
         await state.set_state(Form.menu)
         await return_to_statusMenu(callback)
 
@@ -389,12 +392,12 @@ async def forgotten_cloth_cancel(callback: CallbackQuery, state: FSMContext) -> 
 @router.callback_query(Form.break_confirmation)
 async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
-    if callback.data == 'yes':
+    if callback.data == CallbackData.yes:
         await state.set_state(Form.menu)
         await return_to_statusMenu(callback)
         await callback.answer(text='broke')
     
-    elif callback.data == 'no':
+    elif callback.data == CallbackData.no:
         await state.set_state(Form.menu)
         await return_to_statusMenu(callback)
         await callback.answer()
@@ -403,12 +406,12 @@ async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None
 @router.callback_query(Form.occupied_confirmation)
 async def occupied_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
-    if callback.data == 'yes':
+    if callback.data == CallbackData.yes:
         await state.set_state(Form.menu)
         await return_to_statusMenu(callback)
         await callback.answer(text='occupied')
     
-    elif callback.data == 'no':
+    elif callback.data == CallbackData.nos:
         await state.set_state(Form.menu)
         await return_to_statusMenu(callback)
         await callback.answer()
