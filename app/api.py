@@ -88,7 +88,7 @@ class API:
             'Authorization': str(user_id)
         })
 
-    #Admin interactioins
+    #Admin interactions
     async def admin_check(self, user_id):
         return httpx.get(f"{self.host}/admin/check", headers={
             'Authorization': str(user_id)
