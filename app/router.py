@@ -295,6 +295,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
 @router.callback_query(Form.adminMenu)
 async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
+    print(user_id)
 
     res = await api_controller.admin_check(user_id)
     admin: AdminCheckDto = create_admin_check_dto(res.json())
@@ -307,7 +308,14 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
         elif callback.data == CallbackData.kick_user:
             pass
         elif callback.data == CallbackData.fix:
-            pass
+            res = await api_controller.admin_fix(user_id)
+            print(res.json())
+
+            if res.status_code == 201:
+                await callback.answer(text='fixed')
+            else:
+                await callback.answer(text='smth wrong')
+            
         elif callback.data == CallbackData.stop_machine:
             pass
         elif callback.data == CallbackData.force_end:
@@ -393,9 +401,16 @@ async def forgotten_cloth_cancel(callback: CallbackQuery, state: FSMContext) -> 
 async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
     user_id=callback.from_user.id
     if callback.data == CallbackData.yes:
-        await state.set_state(Form.menu)
-        await return_to_statusMenu(callback)
-        await callback.answer(text='broke')
+        res = await api_controller.report_break(user_id)
+
+        if res.status_code == 201:
+            await state.set_state(Form.menu)
+            await return_to_statusMenu(callback)
+            await callback.answer(text='broke')
+        else:
+            await state.set_state(Form.menu)
+            await return_to_statusMenu(callback)
+            await callback.answer(text='smth wrong')
     
     elif callback.data == CallbackData.no:
         await state.set_state(Form.menu)
@@ -411,7 +426,7 @@ async def occupied_confirmation(callback: CallbackQuery, state: FSMContext) -> N
         await return_to_statusMenu(callback)
         await callback.answer(text='occupied')
     
-    elif callback.data == CallbackData.nos:
+    elif callback.data == CallbackData.no:
         await state.set_state(Form.menu)
         await return_to_statusMenu(callback)
         await callback.answer()

@@ -82,9 +82,20 @@ class API:
             'Authorization': str(user_id)
         })
     
+    #Reports
+    async def report_break(self, user_id):
+        return httpx.post(f"{self.host}/report/break", headers={
+            'Authorization': str(user_id)
+        })
+
     #Admin interactioins
     async def admin_check(self, user_id):
         return httpx.get(f"{self.host}/admin/check", headers={
+            'Authorization': str(user_id)
+        })
+    
+    async def admin_fix(self, user_id):
+        return httpx.post(f"{self.host}/wash/fix", headers={
             'Authorization': str(user_id)
         })
 
