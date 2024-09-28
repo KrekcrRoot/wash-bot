@@ -84,11 +84,24 @@ class API:
     
     #Reports
     async def report_break(self, user_id):
-        return httpx.post(f"{self.host}/report/break", headers={
+        return httpx.post(f"{self.host}/wash/broke", headers={
             'Authorization': str(user_id)
         })
 
     #Admin interactions
+    async def admin_join(self, user_id, target_tag, target_room):
+        return httpx.post(f"{self.host}/admin/join", json={
+            'telegram_tag': target_tag,
+            'room': target_room
+        }, headers={
+            'Authorization': str(user_id)
+        })
+    async def admin_kick(self, user_id, target_tag):
+        return httpx.post(f"{self.host}/admin/kick", json={
+            'telegram_tag': target_tag
+        }, headers={
+            'Authorization': str(user_id)
+        })
     async def admin_check(self, user_id):
         return httpx.get(f"{self.host}/admin/check", headers={
             'Authorization': str(user_id)

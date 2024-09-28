@@ -30,6 +30,8 @@ class Form(StatesGroup):
     machine = State()
     menu = State()
     adminMenu = State()
+    adding_user = State()
+    kicking_user = State()
 
 #Authorization thing
 @router.message(CommandStart())
@@ -83,9 +85,8 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
 #Cancel command (resets state)
 @router.message(Command("cancel"))
 async def cancel_handler(message: Message, state:FSMContext) -> None:
-    if await state.get_state() is not None:
-        await state.clear()
-        await message.answer(text=t.action_canceled)
+    await state.clear()
+    await message.answer(text=t.action_canceled)
 
 #Changing selected machine
 @router.message(Command("change_machine"))
@@ -188,13 +189,13 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
                 await message.answer(text=t.status_waiting,reply_markup=nav.queueMenu)
         
     elif message.text == t.menu_admin:
-        res = await api_controller.user_info(user_id)
-        user: UserEntity = create_user(res.json())
-
         res = await api_controller.admin_check(user_id)
         admin: AdminCheckDto = create_admin_check_dto(res.json())
         
         if admin.isAdmin:
+            res = await api_controller.user_info(user_id)
+            user: UserEntity = create_user(res.json())
+
             await state.set_state(Form.adminMenu)
             await message.answer(text=t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
         else:
@@ -304,17 +305,24 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
     if admin.isAdmin:
         
         if callback.data == CallbackData.add_user:
-            pass
+            await state.set_state(Form.adding_user)
+            await callback.message.delete_reply_markup()
+            await callback.message.edit_text(text=t.admin_add_user)
+            await callback.answer()
+
         elif callback.data == CallbackData.kick_user:
-            pass
+            await state.set_state(Form.kicking_user)
+            await callback.message.delete_reply_markup()
+            await callback.message.edit_text(text=t.admin_kick_user)
+            await callback.answer()
+
         elif callback.data == CallbackData.fix:
             res = await api_controller.admin_fix(user_id)
-            print(res.json())
 
             if res.status_code == 201:
-                await callback.answer(text='fixed')
+                await callback.answer(text=t.admin_machine_fixed)
             else:
-                await callback.answer(text='smth wrong')
+                await callback.answer(text=t.error_machine_fix)
             
         elif callback.data == CallbackData.stop_machine:
             pass
@@ -329,6 +337,84 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
         await callback.message.edit_text(text=t.error_user_not_admin)
         await callback.message.delete_reply_markup()
         await callback.answer()
+
+#Adding user prompt
+@router.message(Form.adding_user)
+async def admin_adding_user(message: Message, state: FSMContext) -> None:
+    user_id = message.from_user.id
+    wrong_format = False
+
+    if type(message.text)==str:
+        m = message.text.split()
+
+        if len(m) == 2:
+            if m[0][0] == '@':
+                telegram_tag = m[0]
+                nums = '0123456789'
+                if 5<=len(m[1])<=6 and m[1][-2]=='/' and m[1][-1] in '23' and all([False for i in m[1][:-2] if i not in nums]):
+                    room = m[1]
+                else:
+                    wrong_format = True
+            else:
+                wrong_format = True
+        else:
+            wrong_format = True
+    else:
+        wrong_format = True
+
+    res = await api_controller.admin_check(user_id)
+    admin: AdminCheckDto = create_admin_check_dto(res.json())
+    
+    if admin.isAdmin:
+        res = await api_controller.user_info(user_id)
+        user: UserEntity = create_user(res.json())
+        
+        await state.set_state(Form.adminMenu)
+        if wrong_format:
+            await message.answer(text=t.error_admin_user_wrong_format+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+        else:
+            res = await api_controller.admin_join(user_id, telegram_tag, room)
+
+            if res.status_code==201:
+                await message.answer(text=t.admin_user_added+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+            else:
+                await message.answer(text=t.error_admin_add_user+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+    else:
+        await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)     
+
+#Kicking user prompt
+@router.message(Form.kicking_user)
+async def admin_kicking_user(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    wrong_format = False
+
+    if type(message.text) == str:
+        if message.text[0]== '@' and ' ' not in message.text and '\n' not in message.text:
+                telegram_tag = message.text
+        else:
+            wrong_format = True
+    else:
+        wrong_format = True
+
+    res = await api_controller.admin_check(user_id)
+    admin: AdminCheckDto = create_admin_check_dto(res.json())
+    
+    if admin.isAdmin:
+        res = await api_controller.user_info(user_id)
+        user: UserEntity = create_user(res.json())
+
+        await state.set_state(Form.adminMenu)
+        if wrong_format:
+            await message.answer(text=t.error_admin_user_wrong_format+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+        else:
+            res = await api_controller.admin_kick(user_id, telegram_tag)
+
+            if res.status_code==201:
+                await message.answer(text=t.admin_user_kicked+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+            else:
+                await message.answer(text=t.error_admin_kick_user+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+    else:
+        await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)         
 
 #Returning inline menu into status menu
 async def return_to_statusMenu(callback: CallbackQuery) -> None:
@@ -405,12 +491,12 @@ async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None
 
         if res.status_code == 201:
             await state.set_state(Form.menu)
+            await callback.answer(text=t.report_broke_noticed)
             await return_to_statusMenu(callback)
-            await callback.answer(text='broke')
         else:
             await state.set_state(Form.menu)
+            await callback.answer(text=t.error_report_broke)
             await return_to_statusMenu(callback)
-            await callback.answer(text='smth wrong')
     
     elif callback.data == CallbackData.no:
         await state.set_state(Form.menu)

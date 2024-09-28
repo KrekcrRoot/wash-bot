@@ -23,11 +23,11 @@ async def main() -> None:
         bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         dp.include_router(router=router)
         result: bool = await bot.set_my_commands([
-            BotCommand(command="start", description="Запустить бота"),
-            BotCommand(command="change_machine", description="Смена стиралки"),
-            BotCommand(command="cancel", description="Отменить действие"),
-            BotCommand(command="info", description="Информация о пользователе"),
-            BotCommand(command="help", description="Объяснение команд")
+            BotCommand(command="start", description = "Запустить бота"),
+            BotCommand(command="change_machine", description = "Смена стиралки"),
+            BotCommand(command="cancel", description = "Отменить действие"),
+            BotCommand(command="info", description = "Информация о пользователе"),
+            BotCommand(command="help", description = "Объяснение команд")
         ])
         await dp.start_polling(bot)
     except KeyboardInterrupt:
