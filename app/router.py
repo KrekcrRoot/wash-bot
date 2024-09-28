@@ -88,9 +88,14 @@ async def cancel_handler(message: Message, state:FSMContext) -> None:
     await state.clear()
     await message.answer(text=t.action_canceled)
 
+#Help command interaction
+@router.message(Command("help"))
+async def help_command(message: Message) -> None:
+    await message.answer(text=t.help)
+
 #Changing selected machine
 @router.message(Command("change_machine"))
-async def cancel_handler(message: Message, state:FSMContext) -> None:
+async def changing_machine(message: Message, state:FSMContext) -> None:
     user_tag = message.from_user.username
     user_id = message.from_user.id
 
@@ -384,7 +389,7 @@ async def admin_adding_user(message: Message, state: FSMContext) -> None:
 
 #Kicking user prompt
 @router.message(Form.kicking_user)
-async def admin_kicking_user(message: Message, state: FSMContext):
+async def admin_kicking_user(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
     wrong_format = False
 
