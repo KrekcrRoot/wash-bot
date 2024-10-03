@@ -43,7 +43,7 @@ btnFree = InlineKeyboardButton(text=t.menu_status_leave_queue,callback_data=Call
 in_queueMenu = InlineKeyboardMarkup(inline_keyboard=[[btnFree]])
 #waiting menu
 btnOccupy_from_queue = InlineKeyboardButton(text=t.menu_status_occupy_from_queue, callback_data=CallbackData.occupy_from_queue)
-waitingMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy_from_queue],[btnCancel]])
+waitingMenu = InlineKeyboardMarkup(inline_keyboard=[[btnOccupy_from_queue],[btnFree]])
 #end menu
 btnEnd = InlineKeyboardButton(text=t.menu_status_end,callback_data=CallbackData.end)
 endMenu = InlineKeyboardMarkup(inline_keyboard=[[btnEnd],[btnReport]])
@@ -57,3 +57,8 @@ btnFix = InlineKeyboardButton(text=t.menu_admin_fix, callback_data=CallbackData.
 btnChangeTitle = InlineKeyboardButton(text=t.menu_admin_change_title, callback_data=CallbackData.change_title)
 btnChangeAdmin = InlineKeyboardButton(text=t.menu_admin_change_admin, callback_data=CallbackData.change_admin)
 adminMenu = InlineKeyboardMarkup(inline_keyboard=[[btnAddUser,btnKickUser],[btnFix],[btnForceEnd], [btnStopMachine], [btnChangeTitle], [btnChangeAdmin]])
+#kicking user menu
+def kickMenu(UsersList):
+    print([i.telegram_tag for i in UsersList])
+    print([[InlineKeyboardButton(text=i.telegram_tag, callback_data=i.telegram_tag) for i in UsersList]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=i.telegram_tag, callback_data=i.telegram_tag) for i in UsersList]])

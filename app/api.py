@@ -54,12 +54,12 @@ class API:
 
     async def get_order(self, user_id):
         return httpx.get(f"{self.host}/order/get-last", headers={
-            'Authorization': user_id
+            'Authorization': str(user_id)
         })
     
     async def cancel_order(self, user_id):
         return httpx.post(f"{self.host}/order/cancel", headers={
-            'Authorization': user_id
+            'Authorization': str(user_id)
         })
     
     #Interaction with machines
@@ -109,6 +109,10 @@ class API:
     
     async def admin_fix(self, user_id):
         return httpx.post(f"{self.host}/wash/fix", headers={
+            'Authorization': str(user_id)
+        })
+    async def admin_get_machine_users(self, user_id):
+        return httpx.get(f"{self.host}/machine/linked-users", headers={
             'Authorization': str(user_id)
         })
 

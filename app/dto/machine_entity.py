@@ -10,5 +10,5 @@ class MachineEntity:
     def __init__(self, dict):
         self.__dict__.update(dict)
 
-def create_machineList(dict):
+def create_machine(dict):
     return json.loads(json.dumps(dict), object_hook=MachineEntity)

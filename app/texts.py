@@ -23,7 +23,7 @@ def status_busy(tag, time):
     return f"Стиралка занята\nЕе использует: {tag}\nВремя начала использования: {time}"
 
 def status_ordered(washer_tag, time, waiter_tag):
-    return f"Стиралка занята\nЕе использует: {washer_tag}\nВремя начала использования: {time}\nЗа ним еще в очереди стоит чел: {waiter_tag}"
+    return f"Стиралка занята\n\nЕе использует: {washer_tag}\nВремя начала использования: {time}\nЗа ним еще в очереди стоит чел: {waiter_tag}"
 
 def status_waiting(tag,time):
     return f"Стиралка закончила стирку, но чел который был в очереди еще не закинул вещи\nВот он: {tag}\nВремя начала использования: {time}"
@@ -36,7 +36,7 @@ wash_queue = 'Стирка закончилась, ваша очередь'
 #Admin
 admin_add_user = 'Укажите пользователя в следующем формате: [tag] [room]\n\nНапример:\n@Ivan 1101/3'
 admin_user_added = 'Пользователь был успешно добавлен'
-admin_kick_user = 'Укажите пользователя в следующем формате: [tag]\n\nНапример:\n@Ivan'
+admin_kick_user = 'Выберите какого пользователя вы хотите исключить из списка ниже:'
 admin_user_kicked = 'Пользователь был успешно исключен'
 admin_machine_fixed = 'Стирка вновь доступна для данной машинки '
 def admin_machine(title):
@@ -56,6 +56,8 @@ confirm_break = 'Вы уверены?'
 error_user_not_admin = 'Вы не админ'
 error_admin_add_user = 'Не получилось добавить пользователя, что-то пошло не так'
 error_admin_kick_user = 'Не получилось исключить пользователя, что-то пошло не так'
+error_admin_kick_user_list = 'Не получилось получить список пользователей, что-то пошло не так'
+error_admin_kick_user_none = "К данной машинке никто не привязан"
 error_admin_user_wrong_format = 'Неверный формат записи'
 error_machine_fix = 'Не получилось разрешить стирку, что-то пошло не так'
 error_machine_link = 'Что-то пошло не так при привязке'
