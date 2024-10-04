@@ -6,3 +6,4 @@ class Status(Enum):
     Busy = 'Busy'
     Waiting = 'Waiting'
     Ordered = 'Ordered'
+    Broken = 'Broken'

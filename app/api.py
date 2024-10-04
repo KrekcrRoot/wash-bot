@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import app.texts as t
 import httpx
 
 import os 
@@ -77,18 +78,23 @@ class API:
         }, json={
             'uuid': machine_id
         })
+    
     async def unlink_machine(self, user_id):
         return httpx.post(f"{self.host}/machine/unlink", headers={
             'Authorization': str(user_id)
         })
     
     #Reports
+
     async def report_break(self, user_id):
-        return httpx.post(f"{self.host}/wash/broke", headers={
+        return httpx.post(f"{self.host}/report/break", headers={
             'Authorization': str(user_id)
+        },json={
+            'body': t.report_broke
         })
 
     #Admin interactions
+
     async def admin_join(self, user_id, target_tag, target_room):
         return httpx.post(f"{self.host}/admin/join", json={
             'telegram_tag': target_tag,
@@ -96,24 +102,48 @@ class API:
         }, headers={
             'Authorization': str(user_id)
         })
+    
     async def admin_kick(self, user_id, target_tag):
         return httpx.post(f"{self.host}/admin/kick", json={
             'telegram_tag': target_tag
         }, headers={
             'Authorization': str(user_id)
         })
+    
     async def admin_check(self, user_id):
         return httpx.get(f"{self.host}/admin/check", headers={
             'Authorization': str(user_id)
         })
     
     async def admin_fix(self, user_id):
-        return httpx.post(f"{self.host}/wash/fix", headers={
+        return httpx.post(f"{self.host}/report/fix", headers={
             'Authorization': str(user_id)
         })
+    
+    async def admin_change_machine_title(self, user_id, title):
+        return httpx.patch(f"{self.host}/machine/rename", headers={
+            'Authorization': str(user_id)
+        }, json={
+            'title': title
+        })
+    
     async def admin_get_machine_users(self, user_id):
         return httpx.get(f"{self.host}/machine/linked-users", headers={
             'Authorization': str(user_id)
+        })
+    
+    async def admin_stop_machine(self, user_id, reason):
+        return httpx.post(f"{self.host}/report/break", headers={
+            'Authorization': str(user_id)
+        }, json={
+            'body': reason
+        })
+
+    async def admin_transfer_rights(self, user_id, target):
+        return httpx.post(f"{self.host}/admin/transfer-rights", headers={
+            'Authorization': str(user_id)
+        }, json={
+            'telegram_tag': target
         })
 
 def init_api_controller():

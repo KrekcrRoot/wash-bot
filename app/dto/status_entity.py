@@ -6,6 +6,7 @@ class StatusEntity:
     status: Status
     telegramTag: str
     timeBegin: str
+    reportBody: str
 
     def __init__(self, dict):
         self.__dict__.update(dict)
