@@ -86,6 +86,14 @@ error_order_free = 'Не получилось выйти из очереди, ч
 error_report_broke = 'Что-то пошло не так'
 
 # --- Menu texts ---
+def menu_info(user, machines):
+    user_machines = ''
+    for i in machines:
+        user_machines += '\n'+i.title
+    
+    return f'Тэг: {user.telegram_tag}\nКоличество использований: {user.count}\nОбщее время использования: {user.time}\nВыбранная машинка: {user.link_machine.title}\n\nДоступные машинки:{user_machines}'
+
+
 menu_help = '❓ Помощь'
 
 menu_yes = '✅ Да'

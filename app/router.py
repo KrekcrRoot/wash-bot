@@ -17,6 +17,7 @@ from app.dto.order_entity import OrderEntity, create_orderEntity
 from app.dto.elapsed_time_dto import ElapsedTime_Dto, create_time
 from app.dto.admin_check_dto import AdminCheckDto, create_admin_check_dto
 from app.dto.status_enum import Status
+from app.dto.status_codes_enum import StatusCode
 from app.dto.callback_codes import CallbackData
 
 router = Router()
@@ -47,14 +48,14 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
         user_is_authorized = False
     else:
         res = await api_controller.auth(user_tag, user_id)
-        user_is_authorized = res.status_code==200
+        user_is_authorized = StatusCode(res.status_code)==StatusCode.OK
 
     if user_is_authorized:
 
         res = await api_controller.user_info(user_id)
         user: UserEntity = create_user(res.json())
 
-        res = await api_controller.get_machines()
+        res = await api_controller.user_machines(user_id)
         machines: List[MachineEntity] = create_machine(res.json())
 
         if user.link_machine is not None:
@@ -91,6 +92,19 @@ async def cancel_handler(message: Message, state:FSMContext) -> None:
     await state.clear()
     await message.answer(text=t.action_canceled)
 
+#Info command interaction
+@router.message(Command("info"))
+async def help_command(message: Message) -> None:
+    user_id = message.from_user.id
+
+    res = await api_controller.user_info(user_id)
+    user: UserEntity = create_user(res.json())
+
+    res = await api_controller.user_machines(user_id)
+    machines: List[MachineEntity] = create_machine(res.json())
+
+    await message.answer(text=t.menu_info(user, machines))
+
 #Help command interaction
 @router.message(Command("help"))
 async def help_command(message: Message) -> None:
@@ -106,18 +120,18 @@ async def changing_machine(message: Message, state:FSMContext) -> None:
         user_is_authorized = False
     else:
         res = await api_controller.auth(user_tag, user_id)
-        user_is_authorized = res.status_code==200
+        user_is_authorized = StatusCode(res.status_code)==StatusCode.OK
 
     if user_is_authorized:
         res = await api_controller.user_info(user_id)
         user: UserEntity = create_user(res.json())
 
         if user.link_machine is not None:
-            res = await api_controller.get_machines()
+            res = await api_controller.user_machines(user_id)
             machines: List[MachineEntity] = create_machine(res.json())
             if len(machines)>1 or True:
                 res = await api_controller.unlink_machine(user_id)
-                if res.status_code==201:
+                if StatusCode(res.status_code)==StatusCode.OK:
                     await state.set_state(Form.machine)
                     await message.answer(text=t.machine_select,reply_markup=nav.machineMenu(machines))
             elif len(machines)==1:
@@ -143,7 +157,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     
     if machine_id is not None:
         res = await api_controller.link_machine(user_id,machine_id)
-        if res.status_code==201:
+        if StatusCode(res.status_code)==StatusCode.OK:
             await state.set_state(Form.menu)
 
             res = await api_controller.admin_check(user_id)
@@ -178,7 +192,7 @@ async def changing_machine_title(message: Message, state: FSMContext) -> None:
             user: UserEntity = create_user(res.json())
             
 
-            if status_code == 200:
+            if StatusCode(status_code) == StatusCode:
                 await state.set_state(Form.adminMenu)
                 await message.answer(text=t.machine_title_changed+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
             else:
@@ -208,7 +222,7 @@ async def stopping_machine(message: Message, state: FSMContext) -> None:
             user: UserEntity = create_user(res.json())
             
 
-            if status_code == 201:
+            if StatusCode(status_code) == StatusCode.OK:
                 await state.set_state(Form.adminMenu)
                 await message.answer(text=t.admin_machine_stopped+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
             else:
@@ -238,7 +252,7 @@ async def transfering_rights(message: Message, state: FSMContext) -> None:
             user: UserEntity = create_user(res.json())
             
 
-            if status_code == 201:
+            if StatusCode(status_code) == StatusCode.OK:
                 await state.set_state(Form.menu)
                 await message.answer(text=t.admin_rights_transfered)
             else:
@@ -314,7 +328,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         
         if Status[status.status]==Status.Free:
             res = await api_controller.wash_occupy(user_id)
-            if res.status_code==201:
+            if StatusCode(res.status_code)==StatusCode.OK:
                 await callback.message.edit_text(text=t.wash_executes)
                 await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
                 await callback.answer()
@@ -328,7 +342,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
 
         if Status[status.status]==Status.Waiting and '@'+callback.from_user.username == status.telegramTag:
             res = await api_controller.wash_occupy(user_id)
-            if res.status_code==201:
+            if StatusCode(res.status_code) == StatusCode.OK:
                 await callback.message.edit_text(text=t.wash_executes)
                 await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
                 await callback.answer()
@@ -344,7 +358,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         if Status[status.status]==Status.Busy:
             res = await api_controller.wash_occupy_order(user_id)
 
-            if res.status_code == 201:
+            if StatusCode(res.status_code) == StatusCode.OK:
                 await callback.message.edit_text(text=t.wash_executes_queue)
                 await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.in_queueMenu)
                 await callback.answer()
@@ -360,7 +374,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         if Status[status.status] == Status.Ordered or Status[status.status] == Status.Waiting:
             res = await api_controller.cancel_order(user_id)
 
-            if res.status_code == 201:
+            if StatusCode(res.status_code) == StatusCode.OK:
                 await return_to_statusMenu(callback)
                 await callback.answer()
             else:
@@ -376,7 +390,7 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
             if Status[status.status]==Status.Busy or Status[status.status]==Status.Ordered:
                 res = await api_controller.wash_end(user_id)
 
-                if res.status_code==201:
+                if StatusCode(res.status_code) == StatusCode.OK:
                     time: ElapsedTime_Dto = create_time(res.json())
 
                     await callback.message.edit_text(text=t.time_elapsed(time.elapsedTime))
@@ -432,7 +446,7 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
             res = await api_controller.admin_get_machine_users(user_id)
             users: List[UserEntity] = create_user(res.json())
 
-            if res.status_code==200:
+            if StatusCode(res.status_code)==StatusCode.OK:
                 if len(users)>0:
                     await callback.message.edit_text(text=t.admin_kick_user)
                     await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.kickMenu(users))
@@ -446,7 +460,7 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
         elif callback.data == CallbackData.fix:
             res = await api_controller.admin_fix(user_id)
 
-            if res.status_code == 201:
+            if StatusCode(res.status_code) == StatusCode.OK:
                 await callback.answer(text=t.admin_machine_fixed)
             else:
                 await callback.answer(text=t.error_machine_fix)
@@ -464,7 +478,7 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
             if Status[status.status]==Status.Busy or Status[status.status]==Status.Ordered:
                 res = await api_controller.wash_end(user_id)
 
-                if res.status_code==201:
+                if StatusCode(res.status_code) == StatusCode.OK:
                     time: ElapsedTime_Dto = create_time(res.json())
 
                     await callback.message.edit_text(text=t.time_elapsed(time.elapsedTime))
@@ -529,7 +543,7 @@ async def admin_adding_user(message: Message, state: FSMContext) -> None:
         else:
             res = await api_controller.admin_join(user_id, telegram_tag, room)
 
-            if res.status_code==201:
+            if StatusCode(res.status_code)== StatusCode.OK:
                 await message.answer(text=t.admin_user_added+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
             else:
                 await message.answer(text=t.error_admin_add_user+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
@@ -552,7 +566,7 @@ async def admin_kicking_user(callback: CallbackQuery, state: FSMContext) -> None
         await state.set_state(Form.adminMenu)
         res = await api_controller.admin_kick(user_id, telegram_tag)
 
-        if res.status_code==201:
+        if StatusCode(res.status_code) == StatusCode.OK:
             await callback.message.edit_text(text=t.admin_user_kicked+'\n\n'+t.admin_machine(user.link_machine.title))
             await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.adminMenu)
             await callback.answer()
@@ -644,7 +658,7 @@ async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None
     if callback.data == CallbackData.yes:
         res = await api_controller.report_break(user_id)
 
-        if res.status_code == 201:
+        if StatusCode(res.status_code) == StatusCode.OK:
             await state.set_state(Form.menu)
             await callback.answer(text=t.report_broke_noticed)
             await return_to_statusMenu(callback)

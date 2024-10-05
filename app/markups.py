@@ -28,7 +28,7 @@ reportMenu = InlineKeyboardMarkup(inline_keyboard=[[btnForgotten],[btnOccupied],
 
 # --- Machine selection Menu ---
 def machineMenu(machineList):
-    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=i.title) for i in machineList]],resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=i.title)] for i in machineList],resize_keyboard=True)
 
 # --- Status Menu ---
 btnReport = InlineKeyboardButton(text=t.menu_report, callback_data=CallbackData.report)
