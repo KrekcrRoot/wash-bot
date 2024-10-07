@@ -53,36 +53,60 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
     if user_is_authorized:
 
         res = await api_controller.user_info(user_id)
-        user: UserEntity = create_user(res.json())
+        if StatusCode(res.status_code) == StatusCode.OK:
+            user: UserEntity = create_user(res.json())
 
-        res = await api_controller.user_machines(user_id)
-        machines: List[MachineEntity] = create_machine(res.json())
+            res = await api_controller.user_machines(user_id)
+            if StatusCode(res.status_code) == StatusCode.OK:
+                machines: List[MachineEntity] = create_machine(res.json())
 
-        if user.link_machine is not None:
-            await state.set_state(Form.menu)
+                if user.link_machine is not None:
+                    await state.set_state(Form.menu)
 
-            res = await api_controller.admin_check(user_id)
-            admin: AdminCheckDto = create_admin_check_dto(res.json())
+                    res = await api_controller.admin_check(user_id)
+                    if StatusCode(res.status_code) == StatusCode.OK:
+                        admin: AdminCheckDto = create_admin_check_dto(res.json())
 
-            if len(machines)>1:
-                if admin.isAdmin:
-                    await message.answer(text=t.auth_success_machine(user.link_machine.title),reply_markup=nav.mainMenuAdmin)
+                        if len(machines)>1:
+                            if admin.isAdmin:
+                                await message.answer(text=t.auth_success_machine(user.link_machine.title),reply_markup=nav.mainMenuAdmin)
+                            else:
+                                await message.answer(text=t.auth_success_machine(user.link_machine.title),reply_markup=nav.mainMenu)
+                        else:
+                            if admin.isAdmin:
+                                await message.answer(text=t.auth_success,reply_markup=nav.mainMenuAdmin)
+                            else:
+                                await message.answer(text=t.auth_success,reply_markup=nav.mainMenu)
+                    else:
+                        await message.answer(text=t.error_checking_admin)
                 else:
-                    await message.answer(text=t.auth_success_machine(user.link_machine.title),reply_markup=nav.mainMenu)
+                    if len(machines)>1 or True:
+                        await state.set_state(Form.machine)
+                        await message.answer(text=t.machine_select, reply_markup=nav.machineMenu(machines))
+                    elif len(machines)==1:
+                        machine_id = machines[0].uuid
+                        res = await api_controller.link_machine(user_id,machine_id)
+                        if StatusCode(res.status_code)==StatusCode.OK:
+                            await state.set_state(Form.menu)
+
+                            res = await api_controller.admin_check(user_id)
+                            if StatusCode(res.status_code) == StatusCode.OK:
+                                admin: AdminCheckDto = create_admin_check_dto(res.json())
+
+                                if admin.isAdmin:
+                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenuAdmin)
+                                else:
+                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenu)
+                            else:
+                                await message.answer(text=t.error_checking_admin)
+                        else:
+                            await message.answer(text=t.error_machine_link)
+                    else:
+                        await message.answer(text=t.machine_no_available)
             else:
-                if admin.isAdmin:
-                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenuAdmin)
-                else:
-                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenu)
+                await message.answer(text=t.error_getting_machines)
         else:
-            if len(machines)>1 or True:
-                await state.set_state(Form.machine)
-                await message.answer(text=t.machine_select, reply_markup=nav.machineMenu(machines))
-            elif len(machines)==1:
-                machine_id = machines[0].uuid
-                res = await api_controller.link_machine(user_id,machine_id)
-            else:
-                message.answer(text=t.machine_no_available)
+            await message.answer(text=t.error_getting_user)
     else:
         await message.answer(text=t.auth_failed)
 
@@ -98,12 +122,18 @@ async def help_command(message: Message) -> None:
     user_id = message.from_user.id
 
     res = await api_controller.user_info(user_id)
-    user: UserEntity = create_user(res.json())
+    if StatusCode(res.status_code)==StatusCode.OK:
+        user: UserEntity = create_user(res.json())
 
-    res = await api_controller.user_machines(user_id)
-    machines: List[MachineEntity] = create_machine(res.json())
+        res = await api_controller.user_machines(user_id)
+        if StatusCode(res.status_code) == StatusCode.OK:
+            machines: List[MachineEntity] = create_machine(res.json())
 
-    await message.answer(text=t.menu_info(user, machines))
+            await message.answer(text=t.menu_info(user, machines))
+        else:
+            await message.answer(text=t.error_getting_machines)
+    else:
+        await message.answer(text=t.error_getting_user)
 
 #Help command interaction
 @router.message(Command("help"))
@@ -124,21 +154,57 @@ async def changing_machine(message: Message, state:FSMContext) -> None:
 
     if user_is_authorized:
         res = await api_controller.user_info(user_id)
-        user: UserEntity = create_user(res.json())
+        if StatusCode(res.status_code) == StatusCode.OK:
+            user: UserEntity = create_user(res.json())
 
-        if user.link_machine is not None:
             res = await api_controller.user_machines(user_id)
-            machines: List[MachineEntity] = create_machine(res.json())
-            if len(machines)>1 or True:
-                res = await api_controller.unlink_machine(user_id)
-                if StatusCode(res.status_code)==StatusCode.OK:
-                    await state.set_state(Form.machine)
-                    await message.answer(text=t.machine_select,reply_markup=nav.machineMenu(machines))
-            elif len(machines)==1:
-                await message.answer(text=t.machine_only_one)
-            else:
-                await message.answer(text=t.machine_no_available)
+            if StatusCode(res.status_code) == StatusCode.OK:
 
+                machines: List[MachineEntity] = create_machine(res.json())
+                if user.link_machine is not None:
+                    if len(machines)>1 or True:
+                        res = await api_controller.unlink_machine(user_id)
+                        if StatusCode(res.status_code)==StatusCode.OK:
+
+                            await state.set_state(Form.machine)
+                            await message.answer(text=t.machine_select,reply_markup=nav.machineMenu(machines))
+
+                        else:
+                            await message.answer(text=t.error_machine_unlink)
+
+                    elif len(machines)==1:
+                        await message.answer(text=t.machine_only_one)
+                    else:
+                        await message.answer(text=t.machine_no_available)
+                    
+                else:
+                    if len(machines)>1 or True:
+                        await state.set_state(Form.machine)
+                        await message.answer(text=t.machine_select, reply_markup=nav.machineMenu(machines))
+                    elif len(machines)==1:
+                        machine_id = machines[0].uuid
+                        res = await api_controller.link_machine(user_id,machine_id)
+                        if StatusCode(res.status_code)==StatusCode.OK:
+                            await state.set_state(Form.menu)
+
+                            res = await api_controller.admin_check(user_id)
+                            if StatusCode(res.status_code) == StatusCode.OK:
+                                admin: AdminCheckDto = create_admin_check_dto(res.json())
+
+                                if admin.isAdmin:
+                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenuAdmin)
+                                else:
+                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenu)
+                            else:
+                                await message.answer(text=t.error_checking_admin)
+                        else:
+                            await message.answer(text=t.error_machine_link)
+                    else:
+                        await message.answer(text=t.machine_no_available)
+            else:
+                await message.answer(text=t.error_getting_machines)
+        else:
+            await message.answer(text=t.error_getting_user)
     else:
         await message.answer(text=t.auth_failed)
 
@@ -147,32 +213,40 @@ async def changing_machine(message: Message, state:FSMContext) -> None:
 async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
     res = await api_controller.user_machines(user_id)
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-    machines: List[MachineEntity] = create_machine(res.json())
-    machine_id=None
-    if type(message.text) is str:
-        for i in machines:
-            if i.title==message.text:
-                machine_id=i.uuid
-    
-    if machine_id is not None:
-        res = await api_controller.link_machine(user_id,machine_id)
-        if StatusCode(res.status_code)==StatusCode.OK:
-            await state.set_state(Form.menu)
+        machines: List[MachineEntity] = create_machine(res.json())
+        machine_id=None
+        if type(message.text) is str:
+            for i in machines:
+                if i.title==message.text:
+                    machine_id=i.uuid
+        
+        if machine_id is not None:
+            res = await api_controller.link_machine(user_id,machine_id)
+            if StatusCode(res.status_code)==StatusCode.OK:
 
-            res = await api_controller.admin_check(user_id)
-            admin: AdminCheckDto = create_admin_check_dto(res.json())
+                await state.set_state(Form.menu)
+                res = await api_controller.admin_check(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+                    admin: AdminCheckDto = create_admin_check_dto(res.json())
 
-            if admin.isAdmin:
-                await message.answer(text=t.auth_success_machine(message.text),reply_markup=nav.mainMenuAdmin)
+                    if admin.isAdmin:
+                        await message.answer(text=t.auth_success_machine(message.text),reply_markup=nav.mainMenuAdmin)
+                    else:
+                        await message.answer(text=t.auth_success_machine(message.text),reply_markup=nav.mainMenu)
+                else:
+                    await state.clear()
+                    await message.answer(text=t.error_checking_admin)
             else:
-                await message.answer(text=t.auth_success_machine(message.text),reply_markup=nav.mainMenu)
-            
+                await state.clear()
+                await message.answer(text=t.error_machine_link)
         else:
             await state.clear()
-            await message.answer(text=t.error_machine_link)
+            await message.answer(text=t.error_machine_name)
     else:
-        await message.answer(text=t.error_machine_name)
+        await state.clear()
+        await message.answer(text=t.error_getting_machines)
 
 #Changing machine title
 @router.message(Form.changing_title)
@@ -180,29 +254,34 @@ async def changing_machine_title(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
 
     res = await api_controller.admin_check(user_id)
-    admin: AdminCheckDto = create_admin_check_dto(res.json())
-    
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-    if admin.isAdmin:
-        if message.text is not None:
-            res = await api_controller.admin_change_machine_title(user_id, message.text)
-            status_code = res.status_code
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
 
-            res = await api_controller.user_info(user_id)
-            user: UserEntity = create_user(res.json())
-            
+        if admin.isAdmin:
+            if message.text is not None:
+                res = await api_controller.admin_change_machine_title(user_id, message.text)
+                status_code = res.status_code
 
-            if StatusCode(status_code) == StatusCode:
-                await state.set_state(Form.adminMenu)
-                await message.answer(text=t.machine_title_changed+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                res = await api_controller.user_info(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+                    user: UserEntity = create_user(res.json())
+                    
+                    if StatusCode(status_code) == StatusCode.OK:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.machine_title_changed+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                    else:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.error_machine_changing_title+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    await message.answer(text=t.error_getting_user)
             else:
-                await state.set_state(Form.adminMenu)
-                await message.answer(text=t.error_machine_changing_title+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                await message.answer(text=t.error_machine_changing_title_format)
         else:
-            await message.answer(text=t.error_machine_changing_title_format)
+            await state.set_state(Form.menu)
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
     else:
-        await state.set_state(Form.menu)
-        await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
+        await message.answer(text=t.error_checking_admin)
 
 #Stopping machine
 @router.message(Form.stopping_machine)
@@ -210,29 +289,34 @@ async def stopping_machine(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
 
     res = await api_controller.admin_check(user_id)
-    admin: AdminCheckDto = create_admin_check_dto(res.json())
-    
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-    if admin.isAdmin:
-        if message.text is not None:
-            res = await api_controller.admin_stop_machine(user_id, message.text)
-            status_code = res.status_code
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
+        if admin.isAdmin:
+            if message.text is not None:
+                res = await api_controller.admin_stop_machine(user_id, message.text)
+                status_code = res.status_code
 
-            res = await api_controller.user_info(user_id)
-            user: UserEntity = create_user(res.json())
-            
+                res = await api_controller.user_info(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
 
-            if StatusCode(status_code) == StatusCode.OK:
-                await state.set_state(Form.adminMenu)
-                await message.answer(text=t.admin_machine_stopped+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                    user: UserEntity = create_user(res.json())
+
+                    if StatusCode(status_code) == StatusCode.OK:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.admin_machine_stopped+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                    else:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.error_stopping_machine+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    await message.answer(text=t.error_getting_user)
             else:
-                await state.set_state(Form.adminMenu)
-                await message.answer(text=t.error_stopping_machine+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                await message.answer(text=t.error_stopping_machine_format)
         else:
-            await message.answer(text=t.error_stopping_machine_format)
+            await state.set_state(Form.menu)
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
     else:
-        await state.set_state(Form.menu)
-        await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
+        await message.answer(text=t.error_checking_admin)
 
 #Transfering rights
 @router.message(Form.transfering_rights)
@@ -240,29 +324,35 @@ async def transfering_rights(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
 
     res = await api_controller.admin_check(user_id)
-    admin: AdminCheckDto = create_admin_check_dto(res.json())
-    
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-    if admin.isAdmin:
-        if type(message.text) is str and message.text[0] == '@' and ' ' not in message.text and '\n' not in message.text:
-            res = await api_controller.admin_transfer_rights(user_id, message.text)
-            status_code = res.status_code
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
 
-            res = await api_controller.user_info(user_id)
-            user: UserEntity = create_user(res.json())
-            
+        if admin.isAdmin:
+            if type(message.text) is str and message.text[0] == '@' and ' ' not in message.text and '\n' not in message.text:
+                res = await api_controller.admin_transfer_rights(user_id, message.text)
+                status_code = res.status_code
 
-            if StatusCode(status_code) == StatusCode.OK:
-                await state.set_state(Form.menu)
-                await message.answer(text=t.admin_rights_transfered)
+                res = await api_controller.user_info(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    user: UserEntity = create_user(res.json())
+
+                    if StatusCode(status_code) == StatusCode.OK:
+                        await state.set_state(Form.menu)
+                        await message.answer(text=t.admin_rights_transfered)
+                    else:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.error_transfering_rights+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    await message.answer(text=t.error_getting_user)
             else:
-                await state.set_state(Form.adminMenu)
-                await message.answer(text=t.error_transfering_rights+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                await message.answer(text=t.error_transfering_rights_format)
         else:
-            await message.answer(text=t.error_transfering_rights_format)
+            await state.set_state(Form.menu)
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
     else:
-        await state.set_state(Form.menu)
-        await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
+        await message.answer(text=t.error_checking_admin)
 
 #Main menu interaction
 @router.message(Form.menu)
@@ -272,49 +362,59 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
     
     if message.text == t.menu_status:
         res = await api_controller.wash_status(user_id)
-        status: StatusEntity = create_status(res.json())
+        if StatusCode(res.status_code) == StatusCode.OK:
 
-        await state.set_state(Form.menu)
-        
-        if Status[status.status] == Status.Broken:
-            await message.answer(text=t.status_broken(status.reportBody))
-        elif Status[status.status] == Status.Free:
-            await message.answer(text=t.status_free,reply_markup=nav.occupyMenu)
-        elif Status[status.status] == Status.Busy:
-            if status.telegramTag == '@'+message.from_user.username:
-                    await message.answer(text=t.wash_executes, reply_markup=nav.endMenu)
-            else:
-                await message.answer(text=t.status_busy(status.telegramTag, status.timeBegin),reply_markup=nav.queueMenu)
-        elif Status[status.status] == Status.Ordered:
-            if status.telegramTag == '@'+message.from_user.username:
-                    await message.answer(text=t.wash_executes, reply_markup=nav.endMenu)
-            else:
-                res = await api_controller.get_order(user_id)
-                waiter: OrderEntity = create_orderEntity(res.json())
-
-                if waiter.user.telegram_id == str(user_id):
-                    await message.answer(text=t.wash_executes_queue, reply_markup=nav.in_queueMenu)
+            status: StatusEntity = create_status(res.json())
+            await state.set_state(Form.menu)
+            
+            if Status[status.status] == Status.Broken:
+                await message.answer(text=t.status_broken(status.reportBody))
+            elif Status[status.status] == Status.Free:
+                await message.answer(text=t.status_free,reply_markup=nav.occupyMenu)
+            elif Status[status.status] == Status.Busy:
+                if status.telegramTag == '@'+message.from_user.username:
+                        await message.answer(text=t.wash_executes, reply_markup=nav.endMenu)
                 else:
-                    await message.answer(text=t.status_ordered(status.telegramTag, status.timeBegin, waiter.user.telegram_tag))
-        elif Status[status.status]==Status.Waiting:
-            if status.telegramTag=='@'+message.from_user.username:
-                    await message.answer(text=t.wash_queue, reply_markup=nav.waitingMenu)
-            else:
-                await message.answer(text=t.status_waiting(status.telegramTag, status.timeBegin))
-        
+                    await message.answer(text=t.status_busy(status.telegramTag, status.timeBegin),reply_markup=nav.queueMenu)
+            elif Status[status.status] == Status.Ordered:
+                if status.telegramTag == '@'+message.from_user.username:
+                        await message.answer(text=t.wash_executes, reply_markup=nav.endMenu)
+                else:
+                    res = await api_controller.get_order(user_id)
+                    if StatusCode(res.status_code) == StatusCode.OK:
+
+                        waiter: OrderEntity = create_orderEntity(res.json())
+
+                        if waiter.user.telegram_id == str(user_id):
+                            await message.answer(text=t.wash_executes_queue, reply_markup=nav.in_queueMenu)
+                        else:
+                            await message.answer(text=t.status_ordered(status.telegramTag, status.timeBegin, waiter.user.telegram_tag))
+                    else:
+                        await message.answer(text=t.error_getting_order)
+            elif Status[status.status]==Status.Waiting:
+                if status.telegramTag=='@'+message.from_user.username:
+                        await message.answer(text=t.wash_queue, reply_markup=nav.waitingMenu)
+                else:
+                    await message.answer(text=t.status_waiting(status.telegramTag, status.timeBegin))
+        else:
+            await message.answer(text=t.error_getting_status)
+
     elif message.text == t.menu_admin:
         res = await api_controller.admin_check(user_id)
-        admin: AdminCheckDto = create_admin_check_dto(res.json())
-        
-        if admin.isAdmin:
-            res = await api_controller.user_info(user_id)
-            user: UserEntity = create_user(res.json())
+        if StatusCode(res.status_code) == StatusCode.OK:
 
-            await state.set_state(Form.adminMenu)
-            await message.answer(text=t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+            admin: AdminCheckDto = create_admin_check_dto(res.json())
+            
+            if admin.isAdmin:
+                res = await api_controller.user_info(user_id)
+                user: UserEntity = create_user(res.json())
+
+                await state.set_state(Form.adminMenu)
+                await message.answer(text=t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+            else:
+                await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
         else:
-            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
-
+            await message.answer(text=t.error_checking_admin)
     elif message.text == t.menu_help:
         await message.answer(text=t.help)
 
@@ -324,84 +424,109 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
     user_id=callback.from_user.id
     if callback.data == CallbackData.occupy:
         res = await api_controller.wash_status(user_id)
-        status: StatusEntity = create_status(res.json())
-        
-        if Status[status.status]==Status.Free:
-            res = await api_controller.wash_occupy(user_id)
-            if StatusCode(res.status_code)==StatusCode.OK:
-                await callback.message.edit_text(text=t.wash_executes)
-                await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
-                await callback.answer()
+        if StatusCode(res.status_code) == StatusCode.OK:
+
+            status: StatusEntity = create_status(res.json())
+            
+            if Status[status.status]==Status.Free:
+                res = await api_controller.wash_occupy(user_id)
+                if StatusCode(res.status_code)==StatusCode.OK:
+
+                    await callback.message.edit_text(text=t.wash_executes)
+                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
+                    await callback.answer()
+                else:
+                    await callback.answer(text=t.error_wash_occupy)
             else:
                 await callback.answer(text=t.error_wash_occupy)
         else:
-            await callback.answer(text=t.error_wash_occupy)
+            await callback.answer(text=t.error_getting_status)
+
     elif callback.data == CallbackData.occupy_from_queue:
         res = await api_controller.wash_status(user_id)
-        status: StatusEntity = create_status(res.json())
+        if StatusCode(res.status_code) == StatusCode.OK:
 
-        if Status[status.status]==Status.Waiting and '@'+callback.from_user.username == status.telegramTag:
-            res = await api_controller.wash_occupy(user_id)
-            if StatusCode(res.status_code) == StatusCode.OK:
-                await callback.message.edit_text(text=t.wash_executes)
-                await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
-                await callback.answer()
+            status: StatusEntity = create_status(res.json())
+
+            if Status[status.status]==Status.Waiting and '@'+callback.from_user.username == status.telegramTag:
+                res = await api_controller.wash_occupy(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    await callback.message.edit_text(text=t.wash_executes)
+                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.endMenu)
+                    await callback.answer()
+                else:
+                    await callback.answer(text=t.error_wash_occupy)
             else:
                 await callback.answer(text=t.error_wash_occupy)
         else:
-            await callback.answer(text=t.error_wash_occupy)
+            await callback.answer(text=t.error_getting_status)
 
     elif callback.data == CallbackData.queue:
         res = await api_controller.wash_status(user_id)
-        status: StatusEntity = create_status(res.json())
-        
-        if Status[status.status]==Status.Busy:
-            res = await api_controller.wash_occupy_order(user_id)
+        if StatusCode(res.status_code) == StatusCode.OK:
 
-            if StatusCode(res.status_code) == StatusCode.OK:
-                await callback.message.edit_text(text=t.wash_executes_queue)
-                await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.in_queueMenu)
-                await callback.answer()
+            status: StatusEntity = create_status(res.json())
+            
+            if Status[status.status]==Status.Busy:
+
+                res = await api_controller.wash_occupy_order(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    await callback.message.edit_text(text=t.wash_executes_queue)
+                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.in_queueMenu)
+                    await callback.answer()
+                else:
+                    await callback.answer(text=t.error_wash_queue)
             else:
                 await callback.answer(text=t.error_wash_queue)
         else:
-            await callback.answer(text=t.error_wash_queue)
+            await callback.answer(text=t.error_getting_status)
 
     elif callback.data == CallbackData.free:
         res = await api_controller.wash_status(user_id)
-        status: StatusEntity = create_status(res.json())
-        
-        if Status[status.status] == Status.Ordered or Status[status.status] == Status.Waiting:
-            res = await api_controller.cancel_order(user_id)
+        if StatusCode(res.status_code) == StatusCode.OK:
 
-            if StatusCode(res.status_code) == StatusCode.OK:
-                await return_to_statusMenu(callback)
-                await callback.answer()
+            status: StatusEntity = create_status(res.json())
+            
+            if Status[status.status] == Status.Ordered or Status[status.status] == Status.Waiting:
+                res = await api_controller.cancel_order(user_id)
+
+                if StatusCode(res.status_code) == StatusCode.OK:
+                    await return_to_statusMenu(callback)
+                    await callback.answer()
+                else:
+                    await callback.answer(text=t.error_order_free)
             else:
                 await callback.answer(text=t.error_order_free)
         else:
-            await callback.answer(text=t.error_order_free)
+            await callback.answer(text=t.error_getting_status)
 
     elif callback.data == CallbackData.end:
         res = await api_controller.wash_status(user_id)
-        status: StatusEntity = create_status(res.json())
-        
-        if status.telegramTag == '@'+callback.from_user.username:
-            if Status[status.status]==Status.Busy or Status[status.status]==Status.Ordered:
-                res = await api_controller.wash_end(user_id)
+        if StatusCode(res.status_code) == StatusCode.OK:
 
-                if StatusCode(res.status_code) == StatusCode.OK:
-                    time: ElapsedTime_Dto = create_time(res.json())
+            status: StatusEntity = create_status(res.json())
+            
+            if status.telegramTag == '@'+callback.from_user.username:
+                if Status[status.status]==Status.Busy or Status[status.status]==Status.Ordered:
 
-                    await callback.message.edit_text(text=t.time_elapsed(time.elapsedTime))
-                    await callback.message.delete_reply_markup()
-                    await callback.answer()
+                    res = await api_controller.wash_end(user_id)
+                    if StatusCode(res.status_code) == StatusCode.OK:
+
+                        time: ElapsedTime_Dto = create_time(res.json())
+
+                        await callback.message.edit_text(text=t.time_elapsed(time.elapsedTime))
+                        await callback.message.delete_reply_markup()
+                        await callback.answer()
+                    else:
+                        await callback.answer(text=t.error_wash_end)
                 else:
                     await callback.answer(text=t.error_wash_end)
             else:
                 await callback.answer(text=t.error_wash_end)
         else:
-            await callback.answer(text=t.error_wash_end)
+            await callback.answer(text=t.error_getting_status)
 
     elif callback.data == CallbackData.report:
         await callback.message.edit_text(text=t.report_select)
@@ -431,80 +556,88 @@ async def adminInlineMenu_handler(callback: CallbackQuery, state: FSMContext) ->
     user_id=callback.from_user.id
 
     res = await api_controller.admin_check(user_id)
-    admin: AdminCheckDto = create_admin_check_dto(res.json())
-    
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-    if admin.isAdmin:
-        
-        if callback.data == CallbackData.add_user:
-            await state.set_state(Form.adding_user)
-            await callback.message.edit_text(text=t.admin_add_user)
-            await callback.message.delete_reply_markup()
-            await callback.answer()
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
 
-        elif callback.data == CallbackData.kick_user:
-            res = await api_controller.admin_get_machine_users(user_id)
-            users: List[UserEntity] = create_user(res.json())
-
-            if StatusCode(res.status_code)==StatusCode.OK:
-                if len(users)>0:
-                    await callback.message.edit_text(text=t.admin_kick_user)
-                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.kickMenu(users))
-                    await state.set_state(Form.kicking_user)
-                    await callback.answer()
-                else:
-                    await callback.answer(text=t.error_admin_kick_user_none)
-            else:
-                await callback.answer(text=t.error_admin_kick_user_list)
-
-        elif callback.data == CallbackData.fix:
-            res = await api_controller.admin_fix(user_id)
-
-            if StatusCode(res.status_code) == StatusCode.OK:
-                await callback.answer(text=t.admin_machine_fixed)
-            else:
-                await callback.answer(text=t.error_machine_fix)
+        if admin.isAdmin:
             
-        elif callback.data == CallbackData.stop_machine:
-            await state.set_state(Form.stopping_machine)
-            await callback.message.edit_text(text=t.admin_stopping_machine)
-            await callback.message.delete_reply_markup()
-            await callback.answer()            
+            if callback.data == CallbackData.add_user:
+                await state.set_state(Form.adding_user)
+                await callback.message.edit_text(text=t.admin_add_user)
+                await callback.message.delete_reply_markup()
+                await callback.answer()
 
-        elif callback.data == CallbackData.force_end:
-            res = await api_controller.wash_status(user_id)
-            status: StatusEntity = create_status(res.json())
+            elif callback.data == CallbackData.kick_user:
+                res = await api_controller.admin_get_machine_users(user_id)
+                if StatusCode(res.status_code)==StatusCode.OK:
 
-            if Status[status.status]==Status.Busy or Status[status.status]==Status.Ordered:
-                res = await api_controller.wash_end(user_id)
+                    users: List[UserEntity] = create_user(res.json())
+
+                    if len(users)>0:
+                        await callback.message.edit_text(text=t.admin_kick_user)
+                        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.kickMenu(users))
+                        await state.set_state(Form.kicking_user)
+                        await callback.answer()
+                    else:
+                        await callback.answer(text=t.error_admin_kick_user_none)
+                else:
+                    await callback.answer(text=t.error_admin_kick_user_list)
+
+            elif callback.data == CallbackData.fix:
+                res = await api_controller.admin_fix(user_id)
 
                 if StatusCode(res.status_code) == StatusCode.OK:
-                    time: ElapsedTime_Dto = create_time(res.json())
-
-                    await callback.message.edit_text(text=t.time_elapsed(time.elapsedTime))
-                    await callback.message.delete_reply_markup()
-                    await callback.answer()
+                    await callback.answer(text=t.admin_machine_fixed)
                 else:
-                    await callback.answer(text=t.error_wash_end)
-            else:
-                await callback.answer(text=t.error_wash_end)
+                    await callback.answer(text=t.error_machine_fix)
                 
-        elif callback.data == CallbackData.change_title:
-            await state.set_state(Form.changing_title)
-            await callback.message.edit_text(text=t.machine_changing_title)
+            elif callback.data == CallbackData.stop_machine:
+                await state.set_state(Form.stopping_machine)
+                await callback.message.edit_text(text=t.admin_stopping_machine)
+                await callback.message.delete_reply_markup()
+                await callback.answer()            
+
+            elif callback.data == CallbackData.force_end:
+                res = await api_controller.wash_status(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    status: StatusEntity = create_status(res.json())
+
+                    if Status[status.status]==Status.Busy or Status[status.status]==Status.Ordered:
+                        res = await api_controller.wash_end(user_id)
+
+                        if StatusCode(res.status_code) == StatusCode.OK:
+                            time: ElapsedTime_Dto = create_time(res.json())
+
+                            await callback.message.edit_text(text=t.time_elapsed(time.elapsedTime))
+                            await callback.message.delete_reply_markup()
+                            await callback.answer()
+                        else:
+                            await callback.answer(text=t.error_wash_end)
+                    else:
+                        await callback.answer(text=t.error_wash_end)
+                else:
+                    await callback.answer(text=t.error_getting_status)
+                    
+            elif callback.data == CallbackData.change_title:
+                await state.set_state(Form.changing_title)
+                await callback.message.edit_text(text=t.machine_changing_title)
+                await callback.message.delete_reply_markup()
+                await callback.answer()
+
+            elif callback.data == CallbackData.change_admin:
+                await state.set_state(Form.transfering_rights)
+                await callback.message.edit_text(text=t.admin_transfering_rights)
+                await callback.message.delete_reply_markup()
+                await callback.answer()
+
+        else:
+            await callback.message.edit_text(text=t.error_user_not_admin)
             await callback.message.delete_reply_markup()
             await callback.answer()
-
-        elif callback.data == CallbackData.change_admin:
-            await state.set_state(Form.transfering_rights)
-            await callback.message.edit_text(text=t.admin_transfering_rights)
-            await callback.message.delete_reply_markup()
-            await callback.answer()
-
     else:
-        await callback.message.edit_text(text=t.error_user_not_admin)
-        await callback.message.delete_reply_markup()
-        await callback.answer()
+        await callback.answer(text=t.error_checking_admin)
 
 #Adding user prompt
 @router.message(Form.adding_user)
@@ -531,24 +664,32 @@ async def admin_adding_user(message: Message, state: FSMContext) -> None:
         wrong_format = True
 
     res = await api_controller.admin_check(user_id)
-    admin: AdminCheckDto = create_admin_check_dto(res.json())
-    
-    if admin.isAdmin:
-        res = await api_controller.user_info(user_id)
-        user: UserEntity = create_user(res.json())
-        
-        await state.set_state(Form.adminMenu)
-        if wrong_format:
-            await message.answer(text=t.error_admin_user_wrong_format+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
-        else:
-            res = await api_controller.admin_join(user_id, telegram_tag, room)
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-            if StatusCode(res.status_code)== StatusCode.OK:
-                await message.answer(text=t.admin_user_added+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
+        
+        if admin.isAdmin:
+            res = await api_controller.user_info(user_id)
+            if StatusCode(res.status_code) == StatusCode.OK:
+
+                user: UserEntity = create_user(res.json())
+                
+                await state.set_state(Form.adminMenu)
+                if wrong_format:
+                    await message.answer(text=t.error_admin_user_wrong_format+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    res = await api_controller.admin_join(user_id, telegram_tag, room)
+
+                    if StatusCode(res.status_code)== StatusCode.OK:
+                        await message.answer(text=t.admin_user_added+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                    else:
+                        await message.answer(text=t.error_admin_add_user+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
             else:
-                await message.answer(text=t.error_admin_add_user+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                await message.answer(text=t.error_getting_user)
+        else:
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)     
     else:
-        await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)     
+        await message.answer(text=t.error_checking_admin)
 
 #Kicking user prompt
 @router.callback_query(Form.kicking_user)
@@ -557,83 +698,98 @@ async def admin_kicking_user(callback: CallbackQuery, state: FSMContext) -> None
     telegram_tag = callback.data
 
     res = await api_controller.admin_check(user_id)
-    admin: AdminCheckDto = create_admin_check_dto(res.json())
-    
-    if admin.isAdmin:
-        res = await api_controller.user_info(user_id)
-        user: UserEntity = create_user(res.json())
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-        await state.set_state(Form.adminMenu)
-        res = await api_controller.admin_kick(user_id, telegram_tag)
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
+        
+        if admin.isAdmin:
+            res = await api_controller.user_info(user_id)
+            if StatusCode(res.status_code) == StatusCode.OK:
+                user: UserEntity = create_user(res.json())
 
-        if StatusCode(res.status_code) == StatusCode.OK:
-            await callback.message.edit_text(text=t.admin_user_kicked+'\n\n'+t.admin_machine(user.link_machine.title))
-            await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.adminMenu)
-            await callback.answer()
+                await state.set_state(Form.adminMenu)
+                res = await api_controller.admin_kick(user_id, telegram_tag)
+
+                if StatusCode(res.status_code) == StatusCode.OK:
+                    await callback.message.edit_text(text=t.admin_user_kicked+'\n\n'+t.admin_machine(user.link_machine.title))
+                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.adminMenu)
+                    await callback.answer()
+                else:
+                    await callback.message.edit_text(text=t.error_admin_kick_user+'\n\n'+t.admin_machine(user.link_machine.title))
+                    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.adminMenu)
+                    await callback.answer()
+            else:
+                await callback.answer(text=t.error_getting_user)
         else:
-            await callback.message.edit_text(text=t.error_admin_kick_user+'\n\n'+t.admin_machine(user.link_machine.title))
-            await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.adminMenu)
-            await callback.answer()
+            await state.set_state(Form.menu)
+            await callback.message.edit_text(text=t.error_user_not_admin)
+            await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.mainMenu)
+            await callback.answer()         
     else:
-        await state.set_state(Form.menu)
-        await callback.message.edit_text(text=t.error_user_not_admin)
-        await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=nav.mainMenu)
-        await callback.answer()         
+        await callback.answer(text=t.error_checking_admin)
 
 #Returning inline menu into status menu
 async def return_to_statusMenu(callback: CallbackQuery) -> None:
     user_id=callback.from_user.id
 
     res = await api_controller.wash_status(user_id)
-    status: StatusEntity = create_status(res.json())
+    if StatusCode(res.status_code) == StatusCode.OK:
 
-    if Status[status.status] == Status.Broken:
-        await callback.message.edit_text(text=t.status_broken(status.reportBody))
-        await callback.message.delete_reply_markup()
-        await callback.answer()
+        status: StatusEntity = create_status(res.json())
 
-    elif Status[status.status]==Status.Free:
-        await callback.message.edit_text(text=t.status_free)
-        await callback.message.edit_reply_markup(reply_markup=nav.occupyMenu)
-        await callback.answer()
-
-    elif Status[status.status]==Status.Busy:
-        if status.telegramTag=='@'+callback.from_user.username:
-                await callback.message.edit_text(text=t.wash_executes)
-                await callback.message.edit_reply_markup(reply_markup=nav.endMenu)
-                await callback.answer()
-        else:
-            await callback.message.edit_text(text=t.status_busy(status.telegramTag, status.timeBegin))
-            await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
+        if Status[status.status] == Status.Broken:
+            await callback.message.edit_text(text=t.status_broken(status.reportBody))
+            await callback.message.delete_reply_markup()
             await callback.answer()
 
-    elif Status[status.status]==Status.Ordered:
-        if status.telegramTag=='@'+callback.from_user.username:
-                await callback.message.edit_text(text=t.wash_executes)
-                await callback.message.edit_reply_markup(reply_markup=nav.endMenu)
-                await callback.answer()
-        else:
-            res = await api_controller.get_order(user_id)
-            waiter: OrderEntity = create_orderEntity(res.json())
+        elif Status[status.status]==Status.Free:
+            await callback.message.edit_text(text=t.status_free)
+            await callback.message.edit_reply_markup(reply_markup=nav.occupyMenu)
+            await callback.answer()
 
-            if waiter.user.telegram_id==user_id:
-                await callback.message.edit_text(text=t.wash_executes_queue)
+        elif Status[status.status]==Status.Busy:
+            if status.telegramTag=='@'+callback.from_user.username:
+                    await callback.message.edit_text(text=t.wash_executes)
+                    await callback.message.edit_reply_markup(reply_markup=nav.endMenu)
+                    await callback.answer()
+            else:
+                await callback.message.edit_text(text=t.status_busy(status.telegramTag, status.timeBegin))
                 await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
                 await callback.answer()
-            else:
-                await callback.message.edit_text(text=t.status_ordered(status.telegramTag, status.timeBegin, waiter.user.telegram_tag))
-                await callback.message.delete_reply_markup
-                await callback.answer()
 
-    elif Status[status.status]==Status.Waiting:
-        if status.telegramTag=='@'+callback.from_user.username:
-                await callback.message.edit_text(text=t.wash_executes)
-                await callback.message.edit_reply_markup(reply_markup=nav.waitingMenu)
-                await callback.answer
-        else:
-            await callback.message.edit_text(text=t.status_waiting)
-            await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
-            await callback.answer()
+        elif Status[status.status]==Status.Ordered:
+            if status.telegramTag=='@'+callback.from_user.username:
+                    await callback.message.edit_text(text=t.wash_executes)
+                    await callback.message.edit_reply_markup(reply_markup=nav.endMenu)
+                    await callback.answer()
+            else:
+                res = await api_controller.get_order(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    waiter: OrderEntity = create_orderEntity(res.json())
+
+                    if waiter.user.telegram_id==user_id:
+                        await callback.message.edit_text(text=t.wash_executes_queue)
+                        await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
+                        await callback.answer()
+                    else:
+                        await callback.message.edit_text(text=t.status_ordered(status.telegramTag, status.timeBegin, waiter.user.telegram_tag))
+                        await callback.message.delete_reply_markup
+                        await callback.answer()
+                else:
+                    await callback.answer(text=t.error_getting_order)
+
+        elif Status[status.status]==Status.Waiting:
+            if status.telegramTag=='@'+callback.from_user.username:
+                    await callback.message.edit_text(text=t.wash_executes)
+                    await callback.message.edit_reply_markup(reply_markup=nav.waitingMenu)
+                    await callback.answer
+            else:
+                await callback.message.edit_text(text=t.status_waiting)
+                await callback.message.edit_reply_markup(reply_markup=nav.queueMenu)
+                await callback.answer()
+    else:
+        await callback.answer(text=t.error_getting_status)
 
 
 #Managing forgotten cloth prompt
