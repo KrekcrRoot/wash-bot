@@ -37,6 +37,108 @@ class Form(StatesGroup):
     stopping_machine = State()
     transfering_rights = State()
 
+# --------------- COMMAND HANDLERS BLOCK ---------------
+
+#Cancel command (resets state)
+@router.message(Command("cancel"))
+async def cancel_command(message: Message, state:FSMContext) -> None:
+    await state.clear()
+    await message.answer(text=t.action_canceled)
+
+#Info command interaction
+@router.message(Command("info"))
+async def info_command(message: Message) -> None:
+    user_id = message.from_user.id
+
+    res = await api_controller.user_info(user_id)
+    if StatusCode(res.status_code)==StatusCode.OK:
+        user: UserEntity = create_user(res.json())
+
+        res = await api_controller.user_machines(user_id)
+        if StatusCode(res.status_code) == StatusCode.OK:
+            machines: List[MachineEntity] = create_machine(res.json())
+
+            await message.answer(text=t.menu_info(user, machines))
+        else:
+            await message.answer(text=t.error_getting_machines)
+    else:
+        await message.answer(text=t.error_getting_user)
+
+#Help command interaction
+@router.message(Command("help"))
+async def help_command(message: Message) -> None:
+    await message.answer(text=t.help)
+
+#Changing selected machine
+@router.message(Command("change_machine"))
+async def change_machine_command(message: Message, state:FSMContext) -> None:
+    user_tag = message.from_user.username
+    user_id = message.from_user.id
+
+    if user_tag is None: 
+        user_is_authorized = False
+    else:
+        res = await api_controller.auth(user_tag, user_id)
+        user_is_authorized = StatusCode(res.status_code)==StatusCode.OK
+
+    if user_is_authorized:
+        res = await api_controller.user_info(user_id)
+        if StatusCode(res.status_code) == StatusCode.OK:
+            user: UserEntity = create_user(res.json())
+
+            res = await api_controller.user_machines(user_id)
+            if StatusCode(res.status_code) == StatusCode.OK:
+
+                machines: List[MachineEntity] = create_machine(res.json())
+                if user.link_machine is not None:
+                    if len(machines)>1 or True:
+                        res = await api_controller.unlink_machine(user_id)
+                        if StatusCode(res.status_code)==StatusCode.OK:
+
+                            await state.set_state(Form.machine)
+                            await message.answer(text=t.machine_select,reply_markup=nav.machineMenu(machines))
+
+                        else:
+                            await message.answer(text=t.error_machine_unlink)
+
+                    elif len(machines) == 1:
+                        await message.answer(text=t.machine_only_one)
+                    else:
+                        await message.answer(text=t.machine_no_available)
+                    
+                else:
+                    if len(machines) > 1:
+                        await state.set_state(Form.machine)
+                        await message.answer(text=t.machine_select, reply_markup=nav.machineMenu(machines))
+                    elif len(machines) == 1:
+                        machine_id = machines[0].uuid
+                        res = await api_controller.link_machine(user_id,machine_id)
+                        if StatusCode(res.status_code)==StatusCode.OK:
+                            await state.set_state(Form.menu)
+
+                            res = await api_controller.admin_check(user_id)
+                            if StatusCode(res.status_code) == StatusCode.OK:
+                                admin: AdminCheckDto = create_admin_check_dto(res.json())
+
+                                if admin.isAdmin:
+                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenuAdmin)
+                                else:
+                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenu)
+                            else:
+                                await message.answer(text=t.error_checking_admin)
+                        else:
+                            await message.answer(text=t.error_machine_link)
+                    else:
+                        await message.answer(text=t.machine_no_available)
+            else:
+                await message.answer(text=t.error_getting_machines)
+        else:
+            await message.answer(text=t.error_getting_user)
+    else:
+        await message.answer(text=t.auth_failed)
+
+#--------------- MAIN INTERACTIONS BLOCK ---------------
+
 #Authorization thing
 @router.message(CommandStart())
 async def command_start_handler(message: Message, state:FSMContext) -> None:
@@ -80,105 +182,7 @@ async def command_start_handler(message: Message, state:FSMContext) -> None:
                     else:
                         await message.answer(text=t.error_checking_admin)
                 else:
-                    if len(machines)>1 or True:
-                        await state.set_state(Form.machine)
-                        await message.answer(text=t.machine_select, reply_markup=nav.machineMenu(machines))
-                    elif len(machines)==1:
-                        machine_id = machines[0].uuid
-                        res = await api_controller.link_machine(user_id,machine_id)
-                        if StatusCode(res.status_code)==StatusCode.OK:
-                            await state.set_state(Form.menu)
-
-                            res = await api_controller.admin_check(user_id)
-                            if StatusCode(res.status_code) == StatusCode.OK:
-                                admin: AdminCheckDto = create_admin_check_dto(res.json())
-
-                                if admin.isAdmin:
-                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenuAdmin)
-                                else:
-                                    await message.answer(text=t.auth_success,reply_markup=nav.mainMenu)
-                            else:
-                                await message.answer(text=t.error_checking_admin)
-                        else:
-                            await message.answer(text=t.error_machine_link)
-                    else:
-                        await message.answer(text=t.machine_no_available)
-            else:
-                await message.answer(text=t.error_getting_machines)
-        else:
-            await message.answer(text=t.error_getting_user)
-    else:
-        await message.answer(text=t.auth_failed)
-
-#Cancel command (resets state)
-@router.message(Command("cancel"))
-async def cancel_handler(message: Message, state:FSMContext) -> None:
-    await state.clear()
-    await message.answer(text=t.action_canceled)
-
-#Info command interaction
-@router.message(Command("info"))
-async def help_command(message: Message) -> None:
-    user_id = message.from_user.id
-
-    res = await api_controller.user_info(user_id)
-    if StatusCode(res.status_code)==StatusCode.OK:
-        user: UserEntity = create_user(res.json())
-
-        res = await api_controller.user_machines(user_id)
-        if StatusCode(res.status_code) == StatusCode.OK:
-            machines: List[MachineEntity] = create_machine(res.json())
-
-            await message.answer(text=t.menu_info(user, machines))
-        else:
-            await message.answer(text=t.error_getting_machines)
-    else:
-        await message.answer(text=t.error_getting_user)
-
-#Help command interaction
-@router.message(Command("help"))
-async def help_command(message: Message) -> None:
-    await message.answer(text=t.help)
-
-#Changing selected machine
-@router.message(Command("change_machine"))
-async def changing_machine(message: Message, state:FSMContext) -> None:
-    user_tag = message.from_user.username
-    user_id = message.from_user.id
-
-    if user_tag is None: 
-        user_is_authorized = False
-    else:
-        res = await api_controller.auth(user_tag, user_id)
-        user_is_authorized = StatusCode(res.status_code)==StatusCode.OK
-
-    if user_is_authorized:
-        res = await api_controller.user_info(user_id)
-        if StatusCode(res.status_code) == StatusCode.OK:
-            user: UserEntity = create_user(res.json())
-
-            res = await api_controller.user_machines(user_id)
-            if StatusCode(res.status_code) == StatusCode.OK:
-
-                machines: List[MachineEntity] = create_machine(res.json())
-                if user.link_machine is not None:
-                    if len(machines)>1 or True:
-                        res = await api_controller.unlink_machine(user_id)
-                        if StatusCode(res.status_code)==StatusCode.OK:
-
-                            await state.set_state(Form.machine)
-                            await message.answer(text=t.machine_select,reply_markup=nav.machineMenu(machines))
-
-                        else:
-                            await message.answer(text=t.error_machine_unlink)
-
-                    elif len(machines)==1:
-                        await message.answer(text=t.machine_only_one)
-                    else:
-                        await message.answer(text=t.machine_no_available)
-                    
-                else:
-                    if len(machines)>1 or True:
+                    if len(machines)>1:
                         await state.set_state(Form.machine)
                         await message.answer(text=t.machine_select, reply_markup=nav.machineMenu(machines))
                     elif len(machines)==1:
@@ -248,112 +252,6 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
         await state.clear()
         await message.answer(text=t.error_getting_machines)
 
-#Changing machine title
-@router.message(Form.changing_title)
-async def changing_machine_title(message: Message, state: FSMContext) -> None:
-    user_id = message.from_user.id
-
-    res = await api_controller.admin_check(user_id)
-    if StatusCode(res.status_code) == StatusCode.OK:
-
-        admin: AdminCheckDto = create_admin_check_dto(res.json())
-
-        if admin.isAdmin:
-            if message.text is not None:
-                res = await api_controller.admin_change_machine_title(user_id, message.text)
-                status_code = res.status_code
-
-                res = await api_controller.user_info(user_id)
-                if StatusCode(res.status_code) == StatusCode.OK:
-                    user: UserEntity = create_user(res.json())
-                    
-                    if StatusCode(status_code) == StatusCode.OK:
-                        await state.set_state(Form.adminMenu)
-                        await message.answer(text=t.machine_title_changed+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
-                    else:
-                        await state.set_state(Form.adminMenu)
-                        await message.answer(text=t.error_machine_changing_title+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
-                else:
-                    await message.answer(text=t.error_getting_user)
-            else:
-                await message.answer(text=t.error_machine_changing_title_format)
-        else:
-            await state.set_state(Form.menu)
-            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
-    else:
-        await message.answer(text=t.error_checking_admin)
-
-#Stopping machine
-@router.message(Form.stopping_machine)
-async def stopping_machine(message: Message, state: FSMContext) -> None:
-    user_id = message.from_user.id
-
-    res = await api_controller.admin_check(user_id)
-    if StatusCode(res.status_code) == StatusCode.OK:
-
-        admin: AdminCheckDto = create_admin_check_dto(res.json())
-        if admin.isAdmin:
-            if message.text is not None:
-                res = await api_controller.admin_stop_machine(user_id, message.text)
-                status_code = res.status_code
-
-                res = await api_controller.user_info(user_id)
-                if StatusCode(res.status_code) == StatusCode.OK:
-
-                    user: UserEntity = create_user(res.json())
-
-                    if StatusCode(status_code) == StatusCode.OK:
-                        await state.set_state(Form.adminMenu)
-                        await message.answer(text=t.admin_machine_stopped+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
-                    else:
-                        await state.set_state(Form.adminMenu)
-                        await message.answer(text=t.error_stopping_machine+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
-                else:
-                    await message.answer(text=t.error_getting_user)
-            else:
-                await message.answer(text=t.error_stopping_machine_format)
-        else:
-            await state.set_state(Form.menu)
-            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
-    else:
-        await message.answer(text=t.error_checking_admin)
-
-#Transfering rights
-@router.message(Form.transfering_rights)
-async def transfering_rights(message: Message, state: FSMContext) -> None:
-    user_id = message.from_user.id
-
-    res = await api_controller.admin_check(user_id)
-    if StatusCode(res.status_code) == StatusCode.OK:
-
-        admin: AdminCheckDto = create_admin_check_dto(res.json())
-
-        if admin.isAdmin:
-            if type(message.text) is str and message.text[0] == '@' and ' ' not in message.text and '\n' not in message.text:
-                res = await api_controller.admin_transfer_rights(user_id, message.text)
-                status_code = res.status_code
-
-                res = await api_controller.user_info(user_id)
-                if StatusCode(res.status_code) == StatusCode.OK:
-
-                    user: UserEntity = create_user(res.json())
-
-                    if StatusCode(status_code) == StatusCode.OK:
-                        await state.set_state(Form.menu)
-                        await message.answer(text=t.admin_rights_transfered)
-                    else:
-                        await state.set_state(Form.adminMenu)
-                        await message.answer(text=t.error_transfering_rights+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
-                else:
-                    await message.answer(text=t.error_getting_user)
-            else:
-                await message.answer(text=t.error_transfering_rights_format)
-        else:
-            await state.set_state(Form.menu)
-            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
-    else:
-        await message.answer(text=t.error_checking_admin)
-
 #Main menu interaction
 @router.message(Form.menu)
 @router.message(Form.adminMenu)
@@ -415,6 +313,7 @@ async def keyboardMenu_handler(message: Message, state: FSMContext) -> None:
                 await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
         else:
             await message.answer(text=t.error_checking_admin)
+
     elif message.text == t.menu_help:
         await message.answer(text=t.help)
 
@@ -549,6 +448,8 @@ async def mainInlineMenu_handler(callback: CallbackQuery, state: FSMContext) -> 
         await callback.message.edit_text(text=t.confirm_break)
         await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,reply_markup=nav.confirmationPrompt)
         await callback.answer()
+
+#--------------- ADMIN INTERACTIONS BLOCK ---------------
 
 #Admin inline menu actions
 @router.callback_query(Form.adminMenu)
@@ -728,6 +629,166 @@ async def admin_kicking_user(callback: CallbackQuery, state: FSMContext) -> None
     else:
         await callback.answer(text=t.error_checking_admin)
 
+#Changing machine title
+@router.message(Form.changing_title)
+async def changing_machine_title(message: Message, state: FSMContext) -> None:
+    user_id = message.from_user.id
+
+    res = await api_controller.admin_check(user_id)
+    if StatusCode(res.status_code) == StatusCode.OK:
+
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
+
+        if admin.isAdmin:
+            if message.text is not None:
+                res = await api_controller.admin_change_machine_title(user_id, message.text)
+                status_code = res.status_code
+
+                res = await api_controller.user_info(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+                    user: UserEntity = create_user(res.json())
+                    
+                    if StatusCode(status_code) == StatusCode.OK:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.machine_title_changed+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                    else:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.error_machine_changing_title+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    await message.answer(text=t.error_getting_user)
+            else:
+                await message.answer(text=t.error_machine_changing_title_format)
+        else:
+            await state.set_state(Form.menu)
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
+    else:
+        await message.answer(text=t.error_checking_admin)
+
+#Stopping machine
+@router.message(Form.stopping_machine)
+async def stopping_machine(message: Message, state: FSMContext) -> None:
+    user_id = message.from_user.id
+
+    res = await api_controller.admin_check(user_id)
+    if StatusCode(res.status_code) == StatusCode.OK:
+
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
+        if admin.isAdmin:
+            if message.text is not None:
+                res = await api_controller.admin_stop_machine(user_id, message.text)
+                status_code = res.status_code
+
+                res = await api_controller.user_info(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    user: UserEntity = create_user(res.json())
+
+                    if StatusCode(status_code) == StatusCode.OK:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.admin_machine_stopped+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                    else:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.error_stopping_machine+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    await message.answer(text=t.error_getting_user)
+            else:
+                await message.answer(text=t.error_stopping_machine_format)
+        else:
+            await state.set_state(Form.menu)
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
+    else:
+        await message.answer(text=t.error_checking_admin)
+
+#Transfering rights
+@router.message(Form.transfering_rights)
+async def transfering_rights(message: Message, state: FSMContext) -> None:
+    user_id = message.from_user.id
+
+    res = await api_controller.admin_check(user_id)
+    if StatusCode(res.status_code) == StatusCode.OK:
+
+        admin: AdminCheckDto = create_admin_check_dto(res.json())
+
+        if admin.isAdmin:
+            if type(message.text) is str and message.text[0] == '@' and ' ' not in message.text and '\n' not in message.text:
+                res = await api_controller.admin_transfer_rights(user_id, message.text)
+                status_code = res.status_code
+
+                res = await api_controller.user_info(user_id)
+                if StatusCode(res.status_code) == StatusCode.OK:
+
+                    user: UserEntity = create_user(res.json())
+
+                    if StatusCode(status_code) == StatusCode.OK:
+                        await state.set_state(Form.menu)
+                        await message.answer(text=t.admin_rights_transfered)
+                    else:
+                        await state.set_state(Form.adminMenu)
+                        await message.answer(text=t.error_transfering_rights+'\n\n'+t.admin_machine(user.link_machine.title), reply_markup=nav.adminMenu)
+                else:
+                    await message.answer(text=t.error_getting_user)
+            else:
+                await message.answer(text=t.error_transfering_rights_format)
+        else:
+            await state.set_state(Form.menu)
+            await message.answer(text=t.error_user_not_admin, reply_markup=nav.mainMenu)
+    else:
+        await message.answer(text=t.error_checking_admin)
+
+#--------------- REPORT INTERACTIONS BLOCK --------------
+
+#Managing forgotten cloth prompt
+@router.message(Form.forgotten_cloth)
+async def forgotten_cloth_photo(message: Message, state: FSMContext) -> None:
+    user_id=message.from_user.id
+    if message.photo is not None:
+        await state.set_state(Form.menu)
+        await message.answer(text=t.report_forgotten_noticed)
+
+@router.callback_query(Form.forgotten_cloth)
+async def forgotten_cloth_cancel(callback: CallbackQuery, state: FSMContext) -> None:
+    user_id=callback.from_user.id
+    if callback.data == CallbackData.cancel:
+        await state.set_state(Form.menu)
+        await return_to_statusMenu(callback)
+
+#Break confirmation
+@router.callback_query(Form.break_confirmation)
+async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
+    user_id=callback.from_user.id
+    if callback.data == CallbackData.yes:
+        res = await api_controller.report_break(user_id)
+
+        if StatusCode(res.status_code) == StatusCode.OK:
+            await state.set_state(Form.menu)
+            await callback.answer(text=t.report_broke_noticed)
+            await return_to_statusMenu(callback)
+        else:
+            await state.set_state(Form.menu)
+            await callback.answer(text=t.error_report_broke)
+            await return_to_statusMenu(callback)
+    
+    elif callback.data == CallbackData.no:
+        await state.set_state(Form.menu)
+        await return_to_statusMenu(callback)
+        await callback.answer()
+
+#Occupied confirmation
+@router.callback_query(Form.occupied_confirmation)
+async def occupied_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
+    user_id=callback.from_user.id
+    if callback.data == CallbackData.yes:
+        await state.set_state(Form.menu)
+        await return_to_statusMenu(callback)
+        await callback.answer(text='occupied')
+    
+    elif callback.data == CallbackData.no:
+        await state.set_state(Form.menu)
+        await return_to_statusMenu(callback)
+        await callback.answer()
+
+#-------------- SHORTCUT FUNCTIONS BLOCK ---------------
+
 #Returning inline menu into status menu
 async def return_to_statusMenu(callback: CallbackQuery) -> None:
     user_id=callback.from_user.id
@@ -790,55 +851,4 @@ async def return_to_statusMenu(callback: CallbackQuery) -> None:
                 await callback.answer()
     else:
         await callback.answer(text=t.error_getting_status)
-
-
-#Managing forgotten cloth prompt
-@router.message(Form.forgotten_cloth)
-async def forgotten_cloth_photo(message: Message, state: FSMContext) -> None:
-    user_id=message.from_user.id
-    if message.photo is not None:
-        await state.set_state(Form.menu)
-        await message.answer(text=t.report_forgotten_noticed)
-
-@router.callback_query(Form.forgotten_cloth)
-async def forgotten_cloth_cancel(callback: CallbackQuery, state: FSMContext) -> None:
-    user_id=callback.from_user.id
-    if callback.data == CallbackData.cancel:
-        await state.set_state(Form.menu)
-        await return_to_statusMenu(callback)
-
-#Break confirmation
-@router.callback_query(Form.break_confirmation)
-async def break_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
-    user_id=callback.from_user.id
-    if callback.data == CallbackData.yes:
-        res = await api_controller.report_break(user_id)
-
-        if StatusCode(res.status_code) == StatusCode.OK:
-            await state.set_state(Form.menu)
-            await callback.answer(text=t.report_broke_noticed)
-            await return_to_statusMenu(callback)
-        else:
-            await state.set_state(Form.menu)
-            await callback.answer(text=t.error_report_broke)
-            await return_to_statusMenu(callback)
-    
-    elif callback.data == CallbackData.no:
-        await state.set_state(Form.menu)
-        await return_to_statusMenu(callback)
-        await callback.answer()
-
-#Occupied confirmation
-@router.callback_query(Form.occupied_confirmation)
-async def occupied_confirmation(callback: CallbackQuery, state: FSMContext) -> None:
-    user_id=callback.from_user.id
-    if callback.data == CallbackData.yes:
-        await state.set_state(Form.menu)
-        await return_to_statusMenu(callback)
-        await callback.answer(text='occupied')
-    
-    elif callback.data == CallbackData.no:
-        await state.set_state(Form.menu)
-        await return_to_statusMenu(callback)
-        await callback.answer()
 
